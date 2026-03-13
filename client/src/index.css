@@ -1,0 +1,95 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #080810;
+  --bg2: #0e0e1a;
+  --bg3: #13131f;
+  --border: #1e1e30;
+  --border2: #2a2a40;
+  --indigo: #6366f1;
+  --indigo-light: #818cf8;
+  --indigo-dim: #6366f122;
+  --green: #10b981;
+  --red: #ef4444;
+  --text: #e8e8f0;
+  --text2: #8888aa;
+  --text3: #4444660;
+  --font-display: 'Syne', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+}
+
+html { font-size: 16px; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+button { font-family: var(--font-body); cursor: pointer; }
+input, textarea { font-family: var(--font-body); }
+a { text-decoration: none; color: inherit; }
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 #6366f144; }
+  70% { box-shadow: 0 0 0 12px #6366f100; }
+  100% { box-shadow: 0 0 0 0 #6366f100; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.fade-up { animation: fadeUp 0.4s ease forwards; }
+.fade-up-2 { animation: fadeUp 0.4s 0.1s ease both; }
+.fade-up-3 { animation: fadeUp 0.4s 0.2s ease both; }
+.fade-up-4 { animation: fadeUp 0.4s 0.3s ease both; }
+
+.page-content {
+  padding-bottom: 80px;
+}
+
+/* Responsive fixes */
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  /* Show bottom nav, hide desktop nav links */
+  .bottom-nav {
+    display: flex !important;
+  }
+  .desktop-nav {
+    display: none !important;
+  }
+
+  /* Add padding so content isn't hidden behind bottom nav */
+  #root > div:last-child {
+    padding-bottom: 80px;
+  }
+
+  /* Feed layout */
+  .feed-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Sessions layout */
+  .session-grid {
+    grid-template-columns: 1fr !important;
+    width: 80%;
+  }
+}
+
+@media (min-width: 769px) {
+  .bottom-nav {
+    display: none !important;
+  }
+}
