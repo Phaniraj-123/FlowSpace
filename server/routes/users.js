@@ -88,12 +88,23 @@ router.get('/search/:query', protect, async (req, res) => {
     const users = await User.find({
       username: { $regex: req.params.query, $options: 'i' },
       _id: { $ne: req.user._id }
-    }).select('username avatar bio followers').limit(10)
+    }).select('username avatar bio followers subscriptionTier').limit(10)
+
     const usersWithFollowStatus = users.map(u => ({
       ...u.toObject(),
       isFollowing: currentUser.following.map(f => f.toString()).includes(u._id.toString())
     }))
-    res.json(usersWithFollowStatus)
+
+    // search posts too
+    const Post = require('../models/post')
+    const posts = await Post.find({
+      content: { $regex: req.params.query, $options: 'i' }
+    })
+      .populate('author', 'username avatar subscriptionTier')
+      .sort({ createdAt: -1 })
+      .limit(10)
+
+    res.json({ users: usersWithFollowStatus, posts })
   } catch (err) {
     res.status(500).json({ error: err.message })
   }
@@ -108,7 +119,8 @@ router.post('/:id/follow', protect, async (req, res) => {
     await User.findByIdAndUpdate(req.params.id, { $addToSet: { followers: req.user._id } })
     await createNotification(
       req.params.id, req.user._id,
-      'follow', `${req.user.username} started following you`, '/profile'
+      'follow', `${req.user.username} started following you`,
+      `/user/${req.user.username}`
     )
     res.json({ message: 'Followed successfully' })
   } catch (err) {
@@ -126,6 +138,33 @@ router.delete('/:id/follow', protect, async (req, res) => {
     res.status(500).json({ error: err.message })
   }
 })
+
+//get stream key
+router.get('/me/stream-key', protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id)
+    if (!user.streamKey) {
+      user.streamKey = require('crypto').randomBytes(16).toString('hex')
+      await User.findByIdAndUpdate(req.user._id, { streamKey: user.streamKey })
+    }
+    res.json({ streamKey: user.streamKey })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// REGENERATE stream key
+router.post('/me/stream-key/regenerate', protect, async (req, res) => {
+  try {
+    const newKey = require('crypto').randomBytes(16).toString('hex')
+    await User.findByIdAndUpdate(req.user._id, { streamKey: newKey })
+    res.json({ streamKey: newKey })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+
 
 // ✅ DYNAMIC route LAST
 router.get('/:username', async (req, res) => {

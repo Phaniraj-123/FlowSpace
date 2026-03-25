@@ -2,8 +2,9 @@ import { useState, useEffect, useRef } from 'react'
 import axios from 'axios'
 import { useAuthStore } from '../store/authStore'
 import { useNavigate } from 'react-router-dom'
-import { Heart, MessageCircle, Image, Send } from 'lucide-react'
+import { Heart, MessageCircle, Image, Send, Trash2, Share2, Link, Zap } from 'lucide-react'
 import Avatar, { TierBadge } from '../components/Avatar'
+import ImageViewer from '../components/ImageViewer'
 
 
 export default function Feed() {
@@ -17,9 +18,13 @@ export default function Feed() {
   const [expandedPost, setExpandedPost] = useState(null)
   const [commentText, setCommentText] = useState('')
   const { token, user } = useAuthStore()
+  const [sharePostId, setSharePostId] = useState(null)
+  const [showDMModal, setShowDMModal] = useState(false)
+  const [sharePost, setSharePost] = useState(null)
+  const [conversations, setConversations] = useState([])
   const headers = { Authorization: `Bearer ${token}` }
+  const [viewerSrc, setViewerSrc] = useState(null)
   const navigate = useNavigate()
-
 
   useEffect(() => { fetchFeed(); fetchSuggestions() }, [])
 
@@ -45,7 +50,6 @@ export default function Feed() {
       const formData = new FormData()
       formData.append('content', content)
       if (mediaFile) formData.append('media', mediaFile)
-
       const res = await axios.post('http://localhost:5000/api/feed', formData, {
         headers: { ...headers, 'Content-Type': 'multipart/form-data' }
       })
@@ -85,7 +89,52 @@ export default function Feed() {
     } catch (err) { console.log(err) }
   }
 
+  async function deletePost(postId) {
+    if (!confirm('Delete this post?')) return
+    try {
+      await axios.delete(`http://localhost:5000/api/feed/${postId}`, { headers })
+      setPosts(prev => prev.filter(p => p._id !== postId))
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to delete')
+    }
+  }
 
+  function copyLink(postId) {
+    navigator.clipboard.writeText(`${window.location.origin}/post/${postId}`)
+    setSharePostId(null)
+    alert('✅ Link copied!')
+  }
+
+  async function shareToFollowers(postId) {
+    setSharePost(postId)
+    setSharePostId(null)
+    try {
+      const res = await axios.get('http://localhost:5000/api/messages/conversations', { headers })
+      setConversations(res.data)
+    } catch (err) { console.log(err) }
+    setShowDMModal(true)
+  }
+
+  async function sendPostDM(conversationId) {
+    try {
+      const postUrl = `${window.location.origin}/post/${sharePost}`
+      await axios.post(`http://localhost:5000/api/messages/${conversationId}`,
+        { content: `Check out this post: ${postUrl}` }, { headers })
+      setShowDMModal(false)
+      alert('✅ Shared!')
+    } catch (err) { console.log(err) }
+  }
+
+  async function nativeShare(post) {
+    try {
+      await navigator.share({
+        title: `${post.author?.username} on FlowSpace`,
+        text: post.content?.slice(0, 100),
+        url: `${window.location.origin}/post/${post._id}`
+      })
+    } catch (err) { console.log(err) }
+    setSharePostId(null)
+  }
 
   return (
     <div className="feed-grid" style={{
@@ -105,7 +154,7 @@ export default function Feed() {
           borderRadius: 16, padding: 20, marginBottom: 24
         }}>
           <div style={{ display: 'flex', gap: 12 }}>
-            <Avatar src={user.author?.avatar} name={user.author?.username} size={38} tier={user.author?.subscriptionTier} />
+            <Avatar src={user?.avatar} name={user?.username} size={38} tier={user?.subscriptionTier} />
             <form onSubmit={createPost} style={{ flex: 1 }}>
               <textarea
                 placeholder="What are you working on today? 🔥"
@@ -118,8 +167,6 @@ export default function Feed() {
                   fontFamily: 'var(--font-body)'
                 }}
               />
-
-              {/* Media preview */}
               {mediaPreview && (
                 <div style={{ position: 'relative', marginTop: 12 }}>
                   {mediaFile?.type.startsWith('video') ? (
@@ -134,13 +181,10 @@ export default function Feed() {
                   }}>✕</button>
                 </div>
               )}
-
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
-                {/* Media upload button */}
                 <div style={{ display: 'flex', gap: 8 }}>
                   <input
-                    ref={fileRef} type="file"
-                    accept="image/*,video/*"
+                    ref={fileRef} type="file" accept="image/*,video/*"
                     style={{ display: 'none' }}
                     onChange={e => {
                       const file = e.target.files[0]
@@ -158,7 +202,6 @@ export default function Feed() {
                     <Image size={14} /> Photo/Video
                   </button>
                 </div>
-
                 <button type="submit" style={{
                   padding: '8px 20px', background: 'var(--indigo)',
                   color: '#fff', border: 'none', borderRadius: 8,
@@ -178,7 +221,7 @@ export default function Feed() {
             textAlign: 'center', padding: 60, color: 'var(--text2)',
             background: 'var(--bg2)', borderRadius: 16, border: '1px solid var(--border)'
           }}>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>🌱</div>
+            <div style={{ fontSize: 40, marginBottom: 12 }}>...</div>
             <p style={{ fontWeight: 600, marginBottom: 6 }}>Nothing here yet</p>
             <p style={{ fontSize: 14 }}>Follow some users or create your first post!</p>
           </div>
@@ -187,6 +230,7 @@ export default function Feed() {
         {posts.map((post, i) => {
           const isExpanded = expandedPost === post._id
           const isLiked = post.likes?.includes(user?.id)
+          const isOwner = post.author?._id === user?._id || post.author?._id === user?.id || post.author === user?._id || post.author === user?.id
 
           return (
             <div key={post._id} className="fade-up" style={{
@@ -198,13 +242,14 @@ export default function Feed() {
               <div style={{ display: 'flex', gap: 12, marginBottom: 14 }}>
                 <Avatar src={post.author?.avatar} name={post.author?.username} size={38} />
                 <div>
-                  <p onClick={() => navigate(`/user/${post.author?.username}`)}
-                    style={{ fontWeight: 600, fontSize: 14, marginBottom: 2, cursor: 'pointer' }}
-                    onMouseEnter={e => e.currentTarget.style.color = 'var(--indigo-light)'}
-                    onMouseLeave={e => e.currentTarget.style.color = 'var(--text)'}
-                  >{post.author?.username}
-                  <TierBadge tier={post.author?.subscriptionTier} />
-                   </p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <p onClick={() => navigate(`/user/${post.author?.username}`)}
+                      style={{ fontWeight: 600, fontSize: 14, marginBottom: 2, cursor: 'pointer' }}
+                      onMouseEnter={e => e.currentTarget.style.color = 'var(--indigo-light)'}
+                      onMouseLeave={e => e.currentTarget.style.color = 'var(--text)'}
+                    >{post.author?.username}</p>
+                    <TierBadge tier={post.author?.subscriptionTier} />
+                  </div>
                   <p style={{ color: 'var(--text2)', fontSize: 12 }}>
                     {new Date(post.createdAt).toLocaleDateString('en-US', {
                       month: 'short', day: 'numeric',
@@ -214,38 +259,41 @@ export default function Feed() {
                 </div>
               </div>
 
-              {post.author?._id === user?._id && !post.isBoosted && (
+              {/* Boost */}
+              {isOwner && !post.isBoosted && (
                 <button onClick={async (e) => {
                   e.stopPropagation()
                   try {
                     await axios.post(`http://localhost:5000/api/monetization/boost/${post._id}`, {}, { headers })
-                    alert('🚀 Post boosted for 24 hours!')
+                    alert(' Post boosted for 24 hours!')
                   } catch (err) {
                     alert(err.response?.data?.error || 'Boost failed')
                   }
                 }} style={{
                   background: 'none', border: 'none', color: 'var(--text2)',
                   cursor: 'pointer', fontSize: 12, display: 'flex',
-                  alignItems: 'center', gap: 4, padding: '4px 8px',
-                  borderRadius: 8
+                  alignItems: 'center', gap: 4, padding: '4px 8px', borderRadius: 8
                 }}>
                   <Zap size={13} /> Boost
                 </button>
               )}
               {post.isBoosted && (
-                <span style={{ fontSize: 11, color: '#f59e0b', fontWeight: 700 }}>🚀 Boosted</span>
+                <span style={{ fontSize: 11, color: '#f59e0b', fontWeight: 700 }}> Boosted</span>
               )}
 
               {/* Content */}
               <p style={{ lineHeight: 1.7, fontSize: 15, color: 'var(--text)', marginBottom: 16 }}>
                 {post.content}
               </p>
-              {/* img snd vid */}
+
               {post.image && (
-                <img src={post.image} alt="post" style={{
-                  width: '100%', borderRadius: 12, marginBottom: 16,
-                  maxHeight: 400, objectFit: 'cover', cursor: 'pointer'
-                }} />
+                <img src={post.image} alt="post"
+                  onClick={() => setViewerSrc(post.image)}
+                  style={{
+                    width: '100%', borderRadius: 12, marginBottom: 16,
+                    maxHeight: 400, objectFit: 'contain', cursor: 'zoom-in'
+                  }}
+                />
               )}
               {post.video && (
                 <video src={post.video} controls style={{
@@ -255,9 +303,11 @@ export default function Feed() {
 
               {/* Actions */}
               <div style={{
-                display: 'flex', gap: 16, borderTop: '1px solid var(--border)',
+                display: 'flex', gap: 8, alignItems: 'center',
+                borderTop: '1px solid var(--border)',
                 paddingTop: 12, marginBottom: isExpanded ? 16 : 0
               }}>
+                {/* Like */}
                 <button onClick={() => likePost(post._id)} style={{
                   background: 'none', border: 'none',
                   color: isLiked ? '#f43f5e' : 'var(--text2)',
@@ -267,6 +317,7 @@ export default function Feed() {
                   <Heart size={15} fill={isLiked ? '#f43f5e' : 'none'} /> {post.likes?.length || 0}
                 </button>
 
+                {/* Comment */}
                 <button onClick={() => navigate(`/post/${post._id}`)} style={{
                   background: 'none', border: 'none', color: 'var(--text2)',
                   cursor: 'pointer', fontSize: 13,
@@ -274,18 +325,92 @@ export default function Feed() {
                 }}>
                   <MessageCircle size={15} /> {post.comments?.length || 0}
                 </button>
+
+                {/* Spacer */}
+                <div style={{ flex: 1 }} />
+
+                {/* Delete — only author or admin */}
+                {(isOwner || user?.isAdmin) && (
+                  <button onClick={() => deletePost(post._id)} style={{
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    color: 'var(--text2)', display: 'flex', alignItems: 'center',
+                    padding: '4px 8px', borderRadius: 8, transition: 'color 0.15s'
+                  }}
+                    onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
+                    onMouseLeave={e => e.currentTarget.style.color = 'var(--text2)'}
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                )}
+
+                {/* Share */}
+                <div style={{ position: 'relative' }}>
+                  <button onClick={() => setSharePostId(sharePostId === post._id ? null : post._id)} style={{
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    color: 'var(--text2)', display: 'flex', alignItems: 'center',
+                    padding: '4px 8px', borderRadius: 8, transition: 'color 0.15s'
+                  }}
+                    onMouseEnter={e => e.currentTarget.style.color = 'var(--indigo)'}
+                    onMouseLeave={e => e.currentTarget.style.color = 'var(--text2)'}
+                  >
+                    <Share2 size={15} />
+                  </button>
+
+                  {sharePostId === post._id && (
+                    <div style={{
+                      position: 'absolute', bottom: 36, right: 0,
+                      background: 'var(--bg)', border: '1px solid var(--border)',
+                      borderRadius: 12, padding: 8, zIndex: 50,
+                      minWidth: 180, boxShadow: '0 8px 24px #0006'
+                    }}>
+                      <button onClick={() => copyLink(post._id)} style={{
+                        width: '100%', padding: '9px 12px', background: 'none',
+                        border: 'none', cursor: 'pointer', color: 'var(--text)',
+                        fontSize: 13, display: 'flex', alignItems: 'center', gap: 8,
+                        borderRadius: 8, textAlign: 'left'
+                      }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'var(--bg2)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                      >
+                        <Link size={14} /> Copy Link
+                      </button>
+                      <button onClick={() => shareToFollowers(post._id)} style={{
+                        width: '100%', padding: '9px 12px', background: 'none',
+                        border: 'none', cursor: 'pointer', color: 'var(--text)',
+                        fontSize: 13, display: 'flex', alignItems: 'center', gap: 8,
+                        borderRadius: 8, textAlign: 'left'
+                      }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'var(--bg2)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                      >
+                        <MessageCircle size={14} /> Share to DM
+                      </button>
+                      {navigator.share && (
+                        <button onClick={() => nativeShare(post)} style={{
+                          width: '100%', padding: '9px 12px', background: 'none',
+                          border: 'none', cursor: 'pointer', color: 'var(--text)',
+                          fontSize: 13, display: 'flex', alignItems: 'center', gap: 8,
+                          borderRadius: 8, textAlign: 'left'
+                        }}
+                          onMouseEnter={e => e.currentTarget.style.background = 'var(--bg2)'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                        >
+                          <Share2 size={14} /> Share via...
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Comments section */}
               {isExpanded && (
                 <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
-
-                  {/* Existing comments */}
                   {post.comments?.length > 0 && (
                     <div style={{ marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
                       {post.comments.map((comment, ci) => (
                         <div key={ci} style={{ display: 'flex', gap: 10 }}>
-                          <Avatar src={post.author?.avatar} name={post.author?.username} size={38} tier={post.author?.subscriptionTier} />
+                          <Avatar src={comment.user?.avatar} name={comment.user?.username} size={32} />
                           <div style={{
                             background: 'var(--bg3)', borderRadius: 10,
                             padding: '8px 12px', flex: 1
@@ -301,16 +426,13 @@ export default function Feed() {
                       ))}
                     </div>
                   )}
-
                   {post.comments?.length === 0 && (
                     <p style={{ color: 'var(--text2)', fontSize: 13, marginBottom: 16 }}>
                       No comments yet. Be the first!
                     </p>
                   )}
-
-                  {/* Add comment */}
                   <div style={{ display: 'flex', gap: 10 }}>
-                    <Avatar src={post.author?.avatar} name={post.author?.username} size={38} tier={post.author?.subscriptionTier} />
+                    <Avatar src={user?.avatar} name={user?.username} size={32} />
                     <div style={{ flex: 1, display: 'flex', gap: 8 }}>
                       <input
                         value={commentText}
@@ -360,12 +482,7 @@ export default function Feed() {
               justifyContent: 'space-between', marginBottom: 14
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{
-                  width: 34, height: 34, borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #10b981, #059669)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: '#fff', fontWeight: 700, fontSize: 13
-                }}>{s.username?.[0]?.toUpperCase()}</div>
+                <Avatar src={s.avatar} name={s.username} size={34} tier={s.subscriptionTier} />
                 <div>
                   <p style={{ fontSize: 13, fontWeight: 600 }}>{s.username}</p>
                   {s.bio && <p style={{ fontSize: 11, color: 'var(--text2)' }}>{s.bio}</p>}
@@ -380,6 +497,45 @@ export default function Feed() {
           ))}
         </div>
       </div>
+
+      {/* DM Share Modal */}
+      {showDMModal && (
+        <div style={{
+          position: 'fixed', inset: 0, background: '#00000088',
+          zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center'
+        }} onClick={() => setShowDMModal(false)}>
+          <div style={{
+            background: 'var(--bg)', border: '1px solid var(--border)',
+            borderRadius: 20, padding: 24, width: 340, maxHeight: 480,
+            overflowY: 'auto'
+          }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 700, marginBottom: 16 }}>
+              Share to DM
+            </h3>
+            {conversations.length === 0 && (
+              <p style={{ color: 'var(--text2)', fontSize: 13 }}>No conversations yet</p>
+            )}
+            {conversations.map(conv => {
+              const other = conv.participants?.find(p => p._id !== user?._id && p._id !== user?.id)
+              return (
+                <div key={conv._id} onClick={() => sendPostDM(conv._id)} style={{
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  padding: '10px', borderRadius: 12, cursor: 'pointer',
+                  transition: 'background 0.15s'
+                }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--bg2)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                >
+                  <Avatar src={other?.avatar} name={other?.username} size={38} />
+                  <p style={{ fontWeight: 600, fontSize: 14 }}>{other?.username}</p>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      <ImageViewer src={viewerSrc} onClose={() => setViewerSrc(null)} />
     </div>
   )
 }

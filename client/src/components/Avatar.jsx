@@ -30,12 +30,41 @@ export default function Avatar({ src, name, size = 38, onClick, tier }) {
     </div>
   )
 }
-export function TierBadge({ tier, size = 14 }) {
+export function TierBadge({ tier, size = 18 }) {
   if (!tier) return null
-  const tierEmojis = { yellow: '🟡', green: '🟢', purple: '🟣' }
+  const colors = {
+    yellow: '#f59e0b',
+    green: '#22c55e',
+    purple: '#a855f7'
+  }
+  const c = colors[tier]
+  if (!c) return null
+
   return (
-    <span style={{ fontSize: size, lineHeight: 1, flexShrink: 0 }}>
-      {tierEmojis[tier]}
-    </span>
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      style={{ flexShrink: 0, display: 'inline-block', verticalAlign: 'middle' }}
+    >
+      {/* Wavy star shape background */}
+      <path
+        d="M12 2L14.09 8.26L21 9.27L16 14.14L17.18 21.02L12 17.77L6.82 21.02L8 14.14L3 9.27L9.91 8.26L12 2Z"
+        fill={c}
+        stroke="white"
+        strokeWidth="1.2"
+        strokeLinejoin="round"
+      />
+      {/* Checkmark */}
+      <path
+        d="M8.5 12L11 14.5L15.5 9.5"
+        stroke="white"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   )
 }

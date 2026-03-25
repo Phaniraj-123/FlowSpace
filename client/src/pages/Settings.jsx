@@ -3,7 +3,7 @@ import axios from 'axios'
 import { useAuthStore } from '../store/authStore'
 import { useNavigate } from 'react-router-dom'
 import Avatar from '../components/Avatar'
-import { Moon, Sun, Bell, Lock, Trash2, Key, Monitor, ChevronRight, X, Check, Eye, EyeOff } from 'lucide-react'
+import { Moon, Sun, Bell, Lock, Trash2, Key, Monitor, ChevronRight, X, Check, Eye, EyeOff, User } from 'lucide-react'
 
 export default function Settings() {
   const { token, user, updateUser, logout } = useAuthStore()
@@ -14,6 +14,12 @@ export default function Settings() {
   const [settings, setSettings] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+
+  //profile
+
+  const [displayName, setDisplayName] = useState(user?.name || '')
+  const [newUsername, setNewUsername] = useState(user?.username || '')
+  const [profileMsg, setProfileMsg] = useState('')
 
   // theme
   const [theme, setTheme] = useState('dark')
@@ -59,14 +65,39 @@ export default function Settings() {
       setPrivacy(res.data.settings?.privacy || privacy)
       setBlockedUsers(res.data.blockedUsers || [])
       setSessions(res.data.sessions || [])
+
+      // pre-fill profile fields
+      const meRes = await axios.get('http://localhost:5000/api/users/me', { headers })
+      setDisplayName(meRes.data.name || '')
+      setNewUsername(meRes.data.username || '')
     } catch (err) { console.log(err) }
     finally { setLoading(false) }
   }
 
+  async function saveProfile() {
+    console.log('clicked!', displayName, newUsername)
+    if (!newUsername.trim()) return setProfileMsg('Username cannot be empty')
+    if (newUsername.length < 3) return setProfileMsg('Username must be at least 3 characters')
+    setSaving(true)
+    try {
+      const freshToken = useAuthStore.getState().token
+      const res = await axios.put('http://localhost:5000/api/settings/profile', {
+        name: displayName,
+        username: newUsername
+      }, { headers: { Authorization: `Bearer ${freshToken}` } })
+      console.log('response:', res.data)
+      updateUser({ name: res.data.name, username: res.data.username })
+      setProfileMsg('✅ Profile updated!')
+    } catch (err) {
+       console.log('error:', err.response?.status, err.response?.data)
+      setProfileMsg(err.response?.data?.error || 'Failed to update profile')
+    } finally { setSaving(false) }
+  }
+
   async function saveTheme(newTheme) {
     setTheme(newTheme)
-    // apply theme to document
     document.documentElement.setAttribute('data-theme', newTheme)
+    localStorage.setItem('theme', newTheme)
     try {
       await axios.put('http://localhost:5000/api/settings/theme', { theme: newTheme }, { headers })
     } catch (err) { console.log(err) }
@@ -137,6 +168,7 @@ export default function Settings() {
   }
 
   const tabs = [
+    { id: 'profile', label: 'Profile', icon: <User size={16} /> },
     { id: 'theme', label: 'Theme', icon: <Moon size={16} /> },
     { id: 'notifications', label: 'Notifications', icon: <Bell size={16} /> },
     { id: 'privacy', label: 'Privacy', icon: <Lock size={16} /> },
@@ -192,6 +224,75 @@ export default function Settings() {
 
         {/* Content */}
         <div style={{ flex: 1 }}>
+
+          {tab === 'profile' && (
+            <div style={{
+              background: 'var(--bg2)', border: '1px solid var(--border)',
+              borderRadius: 16, padding: 24
+            }}>
+              <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 700, marginBottom: 20 }}>
+                Edit Profile
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div>
+                  <label style={{ fontSize: 13, color: 'var(--text2)', display: 'block', marginBottom: 6 }}>
+                    Display Name
+                  </label>
+                  <input
+                    value={displayName} onChange={e => setDisplayName(e.target.value)}
+                    placeholder="Your display name"
+                    style={{
+                      width: '100%', padding: '10px 14px',
+                      background: 'var(--bg3)', border: '1px solid var(--border2)',
+                      borderRadius: 10, color: 'var(--text)', fontSize: 14, outline: 'none'
+                    }}
+                    onFocus={e => e.target.style.borderColor = 'var(--indigo)'}
+                    onBlur={e => e.target.style.borderColor = 'var(--border2)'}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: 13, color: 'var(--text2)', display: 'block', marginBottom: 6 }}>
+                    Username
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <span style={{
+                      position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)',
+                      color: 'var(--text2)', fontSize: 14
+                    }}>@</span>
+                    <input
+                      value={newUsername} onChange={e => setNewUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                      placeholder="username"
+                      style={{
+                        width: '100%', padding: '10px 14px 10px 28px',
+                        background: 'var(--bg3)', border: '1px solid var(--border2)',
+                        borderRadius: 10, color: 'var(--text)', fontSize: 14, outline: 'none'
+                      }}
+                      onFocus={e => e.target.style.borderColor = 'var(--indigo)'}
+                      onBlur={e => e.target.style.borderColor = 'var(--border2)'}
+                    />
+                  </div>
+                  <p style={{ fontSize: 11, color: 'var(--text2)', marginTop: 4 }}>
+                    Only lowercase letters, numbers and underscores
+                  </p>
+                </div>
+              </div>
+              {profileMsg && (
+                <p style={{
+                  fontSize: 13, marginTop: 12,
+                  color: profileMsg.includes('✅') ? 'var(--green)' : '#ef4444'
+                }}>{profileMsg}</p>
+              )}
+              <button onClick={saveProfile} disabled={saving} style={{
+                marginTop: 20, padding: '11px 28px', background: 'var(--indigo)',
+                color: '#fff', border: 'none', borderRadius: 10,
+                fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                opacity: saving ? 0.7 : 1
+              }}>
+                {saving ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          )}
+
 
           {/* THEME */}
           {tab === 'theme' && (

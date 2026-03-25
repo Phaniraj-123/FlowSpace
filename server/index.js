@@ -17,7 +17,7 @@ const io = new Server(httpServer, {
   }
 })
 
-app.use(cors({ origin: ['http://localhost:5173', 'http://localhost:5174'], credentials: true }))
+app.use(cors({ origin: ['http://localhost:3001', 'http://localhost:5174', 'http://localhost:5173'], credentials: true }))
 app.use(express.json())
 app.use(cookieParser())
 
@@ -34,6 +34,7 @@ const livestreamRoutes = require('./routes/livestream')
 const monetizationRoutes = require('./routes/monetization')
 const subscriptionPlansRoutes = require('./routes/subscriptionPlans')
 const settingsRoutes = require('./routes/settings')
+const adminRoutes = require('./routes/admin')
 
 
 app.get('/', (req, res) => res.json({ message: '⚡ FlowSpace API is running!' }))
@@ -50,6 +51,7 @@ app.use('/api/livestream', livestreamRoutes)
 app.use('/api/monetization', monetizationRoutes)
 app.use('/api/plans', subscriptionPlansRoutes)
 app.use('/api/settings', settingsRoutes)
+app.use('/api/admin', adminRoutes)
 
 
 
@@ -57,6 +59,80 @@ app.use('/api/settings', settingsRoutes)
 const jwt = require('jsonwebtoken')
 const User = require('./models/User')
 const Session = require('./models/Session')
+const NodeMediaServer = require('node-media-server')
+
+
+const nmsConfig = {
+  rtmp: {
+    port: 1935,
+    chunk_size: 60000,
+    gop_cache: true,
+    ping: 30,
+    ping_timeout: 60
+  },
+  http: {
+    port: 8000,
+    allow_origin: '*',
+    mediaroot: './media'
+  },
+  trans: {
+    ffmpeg: 'C:\\ffmpeg\\bin\\ffmpeg.exe',
+    tasks: [
+      {
+        app: 'live',
+        hls: true,
+        hlsFlags: '[hls_time=2:hls_list_size=3:hls_flags=delete_segments]',
+        dash: false
+      }
+    ]
+  }
+}
+const nms = new NodeMediaServer(nmsConfig)
+nms.run()
+
+// verify stream key on publish
+nms.on('prePublish', async (id, StreamPath, args) => {
+  try {
+    // StreamPath format: /live/STREAMKEY
+    const parts = (StreamPath || '').split('/')
+    const streamKey = parts[parts.length - 1]
+    console.log('Stream key:', streamKey)
+    
+    const user = await User.findOne({ streamKey })
+    console.log('User found:', user?.username)
+    
+    if (!user) {
+      console.log('No user — rejecting')
+      const session = nms.getSession(id)
+      session.reject()
+      return
+    }
+
+    await LiveStream.findOneAndUpdate(
+      { streamKey },
+      {
+        host: user._id,
+        title: `${user.username}'s Stream`,
+        streamKey,
+        isLive: true,
+        lastHeartbeat: new Date()
+      },
+      { upsert: true, new: true }
+    )
+    console.log('✅ Stream created for', user.username)
+  } catch (err) {
+    console.log('prePublish error:', err.message)
+  }
+})
+
+nms.on('donePublish', async (id, StreamPath, args) => {
+  const streamKey = StreamPath.split('/')[2]
+  await LiveStream.findOneAndUpdate(
+    { streamKey },
+    { isLive: false, endedAt: new Date() }
+  )
+  console.log('Stream ended:', streamKey)
+})
 
 // online users map: userId -> socketId
 const onlineUsers = new Map()
@@ -132,8 +208,7 @@ io.on('connection', async (socket) => {
 
   // DISCONNECT
   socket.on('disconnect', async () => {
-    // wait 10 seconds before ending stream in case host reconnects
-    setTimeout(async () => {
+    try {
       const LiveStream = require('./models/LiveStream')
       const activeStream = await LiveStream.findOne({
         host: socket.userId,
@@ -143,11 +218,11 @@ io.on('connection', async (socket) => {
         activeStream.isLive = false
         activeStream.endedAt = new Date()
         await activeStream.save()
-        io.to(`stream:${activeStream._id}`).emit('stream:ended', {
-          message: 'Host has left the stream'
+        io.to(`stream:${activeStream._id.toString()}`).emit('stream:ended', {
+          message: 'Host has ended the stream'
         })
       }
-    }, 30000) // 30 second grace period
+    } catch (err) { console.log(err) }
   })
   // DM events
   socket.on('dm:join', (conversationId) => {

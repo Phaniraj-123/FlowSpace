@@ -16,6 +16,27 @@ router.get('/', protect, async (req, res) => {
     }
 })
 
+router.put('/profile', protect, async (req, res) => {
+    try {
+        const { name, username } = req.body
+        if (!username) return res.status(400).json({ error: 'Username required' })
+        if (username.length < 3) return res.status(400).json({ error: 'Username too short' })
+
+        const existing = await User.findOne({ username, _id: { $ne: req.user._id } })
+        if (existing) return res.status(400).json({ error: 'Username already taken' })
+
+        const updated = await User.findByIdAndUpdate(
+            req.user._id,
+            { $set: { username, name } },
+            { new: true }
+        ).select('-password')
+
+        res.json(updated)
+    } catch (err) {
+        res.status(500).json({ error: err.message })
+    }
+})
+
 // UPDATE theme
 router.put('/theme', protect, async (req, res) => {
     try {

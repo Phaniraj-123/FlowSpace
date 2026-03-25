@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useAuthStore } from '../store/authStore'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
-import Avatar from '../components/Avatar'
+import Avatar, { TierBadge } from '../components/Avatar'
 import { Target, CheckCircle2, Timer, Clock, Flame, LogOut, ChevronRight, Camera, Edit2, X, Check, Crown, Settings as SettingsIcon } from 'lucide-react'
 
 export default function Profile() {
@@ -19,6 +19,11 @@ export default function Profile() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [avatarPreview, setAvatarPreview] = useState(null)
   const fileRef = useRef(null)
+ 
+
+  useEffect(() => {
+    if (!user || !token) navigate('/login')
+  }, [user, token])
 
 
   useEffect(() => { fetchStats() }, [])
@@ -26,6 +31,7 @@ export default function Profile() {
   async function fetchStats() {
     try {
       const res = await axios.get('http://localhost:5000/api/users/me/stats', { headers })
+      console.log("stats:", res.data)
       setStats(res.data)
     } catch (err) { console.log(err) }
     finally { setLoading(false) }
@@ -61,44 +67,44 @@ export default function Profile() {
     navigate('/login')
   }
 
-    {/* {Modal} */}
-        const UserListModal = ({title, users, onClose}) => ( 
-        <div style={{
-          position: 'fixed', inset: 0, background: '#00000088',
-          zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24
-        }} onClick={onClose}>
-          <div onClick={e => e.stopPropagation()} style={{
-            background: 'var(--bg2)', border: '1px solid var(--border)',
-            borderRadius: 20, padding: 24, width: '100%', maxWidth: 400,
-            maxHeight: '70vh', overflow: 'hidden', display: 'flex', flexDirection: 'column'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 700 }}>{title}</h3>
-              <button onClick={onClose} style={{
-                background: 'none', border: 'none', color: 'var(--text2)', cursor: 'pointer', fontSize: 20
-              }}>✕</button>
-            </div>
-            <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {users?.length === 0 && (
-                <p style={{ color: 'var(--text2)', textAlign: 'center', padding: 20 }}>No users yet</p>
-              )}
-              {users?.map(u => (
-                <div key={u._id} onClick={() => { onClose(); navigate(`/user/${u.username}`) }}
-                  style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', padding: '4px 0' }}
-                  onMouseEnter={e => e.currentTarget.style.opacity = 0.8}
-                  onMouseLeave={e => e.currentTarget.style.opacity = 1}
-                >
-                  <Avatar src={u.avatar} name={u.username} size={40} />
-                  <div>
-                    <p style={{ fontWeight: 600, fontSize: 14 }}>{u.username}</p>
-                    {u.bio && <p style={{ fontSize: 12, color: 'var(--text2)' }}>{u.bio}</p>}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+  {/* {Modal} */ }
+  const UserListModal = ({ title, users, onClose }) => (
+    <div style={{
+      position: 'fixed', inset: 0, background: '#00000088',
+      zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24
+    }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{
+        background: 'var(--bg2)', border: '1px solid var(--border)',
+        borderRadius: 20, padding: 24, width: '100%', maxWidth: 400,
+        maxHeight: '70vh', overflow: 'hidden', display: 'flex', flexDirection: 'column'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 700 }}>{title}</h3>
+          <button onClick={onClose} style={{
+            background: 'none', border: 'none', color: 'var(--text2)', cursor: 'pointer', fontSize: 20
+          }}>✕</button>
         </div>
-        )
+        <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {users?.length === 0 && (
+            <p style={{ color: 'var(--text2)', textAlign: 'center', padding: 20 }}>No users yet</p>
+          )}
+          {users?.map(u => (
+            <div key={u._id} onClick={() => { onClose(); navigate(`/user/${u.username}`) }}
+              style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', padding: '4px 0' }}
+              onMouseEnter={e => e.currentTarget.style.opacity = 0.8}
+              onMouseLeave={e => e.currentTarget.style.opacity = 1}
+            >
+              <Avatar src={u.avatar} name={u.username} size={40} />
+              <div>
+                <p style={{ fontWeight: 600, fontSize: 14 }}>{u.username}</p>
+                {u.bio && <p style={{ fontSize: 12, color: 'var(--text2)' }}>{u.bio}</p>}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
 
   const StatCard = ({ icon, value, label, color = 'var(--indigo)' }) => (
     <div style={{
@@ -190,8 +196,9 @@ export default function Profile() {
             <h2 style={{
               fontFamily: 'var(--font-display)', fontSize: 22,
               fontWeight: 800, marginBottom: 4
-            }}>{user?.username}</h2>
-            <p style={{ color: 'var(--text2)', fontSize: 13, marginBottom: 10 }}>{user?.email}</p>
+            }}>{user?.name || user?.username}
+                <TierBadge tier={user?.subscriptionTier} size={24}/></h2>
+            <p style={{ color: 'var(--text2)', fontSize: 13, marginBottom: 10 }}>{user?.username || user?.username}</p>
 
             {/* Bio */}
             {editingBio ? (
@@ -249,7 +256,7 @@ export default function Profile() {
             )}
           </div>
         </div>
-      
+
         {/* Followers and following */}
         <div style={{ display: 'flex', gap: 20, marginBottom: 16 }}>
           <button onClick={() => setShowFollowers(true)} style={{

@@ -68,6 +68,23 @@ export default function LiveStreamRoom() {
         }
     }, [isHost, localStreamRef.current])
 
+    useEffect(() => {
+        if (!isHost && stream?.streamKey && remoteVideoRef.current) {
+            const hlsUrl = `http://localhost:8000/live/${stream.streamKey}/index.m3u8`
+            if (window.Hls && window.Hls.isSupported()) {
+                const hls = new window.Hls()
+                hls.loadSource(hlsUrl)
+                hls.attachMedia(remoteVideoRef.current)
+                hls.on(window.Hls.Events.MANIFEST_PARSED, () => {
+                    remoteVideoRef.current.play()
+                })
+                return () => hls.destroy()
+            } else {
+                remoteVideoRef.current.src = hlsUrl
+            }
+        }
+    }, [stream, isHost])
+
     async function fetchStream() {
         try {
             const res = await axios.get(`http://localhost:5000/api/livestream/${id}`, { headers })
@@ -212,14 +229,6 @@ export default function LiveStreamRoom() {
         if (!text.trim()) return
         const socket = getSocket()
         socket.emit('stream:chat', { streamId: id, text })
-        setMessages(prev => [...prev, {
-            username: user?.username,
-            avatar: user?.avatar,
-            text,
-            type: 'message',
-            createdAt: new Date(),
-            _id: Date.now()
-        }])
         setText('')
     }
 
@@ -257,7 +266,7 @@ export default function LiveStreamRoom() {
 
     return (
         <div style={{
-            maxWidth: 1400, margin: '0 auto', padding: '20px 24px',
+            maxWidth: 1600, margin: '0 auto', padding: '20px 24px',
             display: 'grid', gridTemplateColumns: '1fr 300px', gap: 16,
             height: 'calc(100vh - 80px)', overflow: 'hidden'
         }}>
@@ -273,7 +282,13 @@ export default function LiveStreamRoom() {
                         <video ref={localVideoRef} autoPlay muted playsInline style={{
                             width: '100%', height: '100%', objectFit: 'cover'
                         }} />
+                    ) : stream?.streamKey ? (
+                        // OBS stream — use HLS
+                        <video ref={remoteVideoRef} autoPlay playsInline controls style={{
+                            width: '100%', height: '100%', objectFit: 'cover'
+                        }} />
                     ) : (
+                        // Browser stream — use WebRTC
                         <video ref={remoteVideoRef} autoPlay playsInline style={{
                             width: '100%', height: '100%', objectFit: 'cover'
                         }} />
@@ -457,7 +472,7 @@ export default function LiveStreamRoom() {
             <div style={{
                 background: 'var(--bg2)', border: '1px solid var(--border)',
                 borderRadius: 16, display: 'flex', flexDirection: 'column',
-                overflow: 'hidden', height: '100%'
+                overflow: 'hidden', height: '90%'
             }}>
                 <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
                     <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 700 }}>Live Chat</h3>
@@ -473,7 +488,12 @@ export default function LiveStreamRoom() {
                                     <>
                                         <span style={{
                                             fontSize: 12, fontWeight: 700, marginRight: 6,
-                                            color: msg.username === stream.host?.username ? 'var(--red)' : 'var(--indigo-light)'
+                                            color: msg.username === stream.host?.username ? 'var(--red)' : (() => {
+                                                const colors = ['#6366f1', '#a855f7', '#f59e0b', '#22c55e', '#3b82f6', '#ec4899']
+                                                let hash = 0
+                                                for (let i = 0; i < msg.username.length; i++) hash = msg.username.charCodeAt(i) + ((hash << 5) - hash)
+                                                return colors[Math.abs(hash) % colors.length]
+                                            })()
                                         }}>
                                             {msg.username === stream.host?.username ? '🎙️ ' : ''}{msg.username}
                                         </span>

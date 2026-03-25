@@ -115,7 +115,7 @@ export default function Login() {
 
           <p style={{ textAlign: 'center', marginTop: 20, color: 'var(--text2)', fontSize: 14 }}>
             No account?{' '}
-            <a href="/register" style={{ color: 'var(--indigo-light)', fontWeight: 600 }}>Create one</a>
+            <span onClick={() => navigate('/register')} style={{ color: 'var(--indigo-light)', fontWeight: 600, cursor: 'pointer' }}>Create one</span>
           </p>
         </div>
       </div>

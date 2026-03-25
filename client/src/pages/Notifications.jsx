@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import axios from 'axios'
 import { useAuthStore } from '../store/authStore'
 import { useNavigate } from 'react-router-dom'
-
 import { UserPlus, Heart, MessageCircle, CornerDownRight, Bell } from 'lucide-react'
 import Avatar from '../components/Avatar'
 

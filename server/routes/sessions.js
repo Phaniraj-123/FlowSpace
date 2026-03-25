@@ -47,6 +47,22 @@ router.get('/me/history', protect, async (req, res) => {
   }
 })
 
+// GET session history
+router.get('/history', protect, async (req, res) => {
+  try {
+    console.log('fetching history for:', req.user._id)
+    const sessions = await Session.find({
+      'participants.user': req.user._id,
+      isLive: false
+    }).sort({ createdAt: -1 }).limit(100)
+    console.log('sessions found:', sessions.length)
+    res.json(sessions)
+  } catch (err) {
+    console.log('history error:', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
 // GET single session
 router.get('/:id', async (req, res) => {
   try {
@@ -72,7 +88,7 @@ router.patch('/:id/end', protect, async (req, res) => {
 
     await session.save()
     await checkAchievements(req.user._id)
-    
+
     // update user total focus minutes
     await User.findByIdAndUpdate(req.user._id, {
       $inc: { totalFocusMinutes: session.actualDuration }
@@ -84,14 +100,13 @@ router.patch('/:id/end', protect, async (req, res) => {
   }
 })
 
-// GET session history
-router.get('/history', protect, async (req, res) => {
+
+
+router.post('/:id/join', protect, async (req, res) => {
   try {
-    const sessions = await Session.find({
-      'participants.user': req.user._id,
-      isLive: false
-    }).sort({ createdAt: -1 }).limit(100)
-    res.json(sessions)
+    const session = await Session.findById(req.params.id)
+    if (!session) return res.status(404).json({ error: 'Session not found' })
+    res.json(session)
   } catch (err) {
     res.status(500).json({ error: err.message })
   }

@@ -136,14 +136,14 @@ export default function Messages() {
   }
 
   async function deleteMessage(msgId) {
-  try {
-    await axios.delete(`http://localhost:5000/api/messages/${msgId}`, { headers })
-    socket?.emit('dm:delete', { conversationId: activeConv._id, messageId: msgId })
-    setMessages(prev => prev.filter(m => m._id !== msgId))
-    // refresh conversations to update sidebar
-    fetchConversations()
-  } catch (err) { console.log(err) }
-}
+    try {
+      await axios.delete(`http://localhost:5000/api/messages/${msgId}`, { headers })
+      socket?.emit('dm:delete', { conversationId: activeConv._id, messageId: msgId })
+      setMessages(prev => prev.filter(m => m._id !== msgId))
+      // refresh conversations to update sidebar
+      fetchConversations()
+    } catch (err) { console.log(err) }
+  }
 
   async function startRecording() {
     try {
@@ -401,7 +401,7 @@ export default function Messages() {
                     {!isMe && (
                       <div style={{ width: 28, flexShrink: 0 }}>
                         {showAvatar && <Avatar src={msg.sender?.avatar} name={msg.sender?.username} size={28} />
-}
+                        }
                       </div>
                     )}
 
@@ -430,7 +430,13 @@ export default function Messages() {
                         background: isMe ? 'var(--indigo)' : 'var(--bg3)',
                         color: isMe ? '#fff' : 'var(--text)',
                         fontSize: 14, lineHeight: 1.5,
-                        border: isMe ? 'none' : '1px solid var(--border)'
+                        border: isMe ? 'none' : '1px solid var(--border)',
+                        padding: '10px 14px',
+                        maxWidth: '100%',
+                        wordBreak: 'break-word',
+                        whiteSpace: 'pre-wrap',
+                        fontSize: 14,
+                        lineHeight: 1.5
                       }}>
                         {msg.image && (
                           msg.image.includes('.webm') || msg.image.includes('video') ? (

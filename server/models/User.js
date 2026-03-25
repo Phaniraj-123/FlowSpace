@@ -5,15 +5,19 @@ const bcrypt = require('bcryptjs')
 
 
 const UserSchema = new mongoose.Schema({
+  isAdmin: { type: Boolean, default: false },
   username: { type: String, required: true, unique: true, trim: true },
   email: { type: String, required: true, unique: true, lowercase: true },
   password: { type: String, required: true, minlength: 6 },
   avatar: { type: String, default: '' },
   bio: { type: String, default: '' },
+  isBanned: { type: Boolean, default: false },
+  streamKey: { type: String, default: () => require('crypto').randomBytes(16).toString('hex') },
   following: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   followers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   subscriptionTier: { type: String, enum: ['yellow', 'green', 'purple'], default: null },
   totalEarnings: { type: Number, default: 0 },
+  name: { type: String, default: '' },
   settings: {
     theme: { type: String, enum: ['dark', 'light'], default: 'dark' },
     notifications: {

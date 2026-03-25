@@ -6,6 +6,7 @@ const User = require('../models/User')
 const { protect } = require('../middleware/auth')
 const upload = require('../middleware/upload')
 const { uploadToCloudinary } = require('../utils/cloudinary')
+streamKey: { type: String }
 
 // GET all live streams
 router.get('/', async (req, res) => {

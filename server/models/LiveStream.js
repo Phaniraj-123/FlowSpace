@@ -6,6 +6,7 @@ const LiveStreamSchema = new mongoose.Schema({
   description: { type: String, default: '' },
   thumbnail: { type: String, default: '' },
   isLive: { type: Boolean, default: true },
+  streamKey: { type: String, default: null },
   viewers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   viewerCount: { type: Number, default: 0 },
   likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],

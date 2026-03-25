@@ -51,4 +51,12 @@ router.patch('/:id/read', protect, async (req, res) => {
   }
 })
 
+router.delete('/clear-all', protect, async (req, res) => {
+  try {
+    await Notification.deleteMany({ to: req.user._id })
+    res.json({ success: true })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
 module.exports = router

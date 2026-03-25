@@ -3,8 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import { useAuthStore } from '../store/authStore'
 import { ArrowLeft, UserPlus, UserCheck, Heart, MessageCircle, Target, Timer, Clock } from 'lucide-react'
-import Avatar from '../components/Avatar'
-
+import Avatar, { TierBadge } from '../components/Avatar'
 
 export default function UserProfile() {
   const { username } = useParams()
@@ -22,7 +21,7 @@ export default function UserProfile() {
   const [showFollowing, setShowFollowing] = useState(false)
   const [subscription, setSubscription] = useState(null)
   const [showSubModal, setShowSubModal] = useState(false)
-
+  const [isBlocked, setIsBlocked] = useState(false)
 
 
 
@@ -77,36 +76,56 @@ export default function UserProfile() {
   //   }
   // }
 
-  async function subscribe(tier) {
+
+  async function blockUser() {
+    if (!confirm(`Block @${profile.username}? They won't be able to see your posts.`)) return
     try {
-      // create order
-      const orderRes = await axios.post('http://localhost:5000/api/plans/create-order',
-        { plan: tier, creatorId: profile._id }, { headers })
+      await axios.post(`http://localhost:5000/api/settings/block/${profile._id}`, {}, { headers })
+      setIsBlocked(true)
+      alert(` @${profile.username} has been blocked`)
+    } catch (err) { console.log(err) }
+  }
+
+  async function unblockUser() {
+    try {
+      await axios.delete(`http://localhost:5000/api/settings/block/${profile._id}`, { headers })
+      setIsBlocked(false)
+    } catch (err) { console.log(err) }
+  }
+  async function subscribe(months, price) {
+    setShowSubModal(false)
+    try {
+      const freshToken = useAuthStore.getState().token
+
+      const orderRes = await axios.post('http://localhost:5000/api/plans/create-order', {
+        creatorId: profile._id,
+        months,
+        price
+      }, { headers: { Authorization: `Bearer ${freshToken}` } })
 
       const { orderId, amount, currency, keyId } = orderRes.data
 
-      // open razorpay
       const options = {
         key: keyId,
         amount,
         currency,
         name: 'FlowSpace',
-        description: `${tier} subscription to ${profile.username}`,
+        description: `${months} month subscription to ${profile.username}`,
         order_id: orderId,
         handler: async function (response) {
-          // verify payment
-          const verifyRes = await axios.post('http://localhost:5000/api/plans/verify', {
+          const freshToken2 = useAuthStore.getState().token
+          await axios.post('http://localhost:5000/api/plans/verify', {
             razorpay_order_id: response.razorpay_order_id,
             razorpay_payment_id: response.razorpay_payment_id,
             razorpay_signature: response.razorpay_signature,
             creatorId: profile._id,
-            plan: tier
-          }, { headers })
-          setSubscription({ tier })
-          setShowSubModal(false)
-          alert(`✅ Subscribed! ${verifyRes.data.message}`)
+            months,
+            price
+          }, { headers: { Authorization: `Bearer ${freshToken2}` } })
+          setSubscription({ months })
+          alert(` Subscribed for ${months} month${months > 1 ? 's' : ''}!`)
         },
-        prefill: { name: user?.username, email: user?.email },
+        prefill: { name: user?.name || user?.username, email: user?.email },
         theme: { color: '#6366f1' }
       }
 
@@ -247,7 +266,7 @@ export default function UserProfile() {
           )}
         </div>
 
-        {!isOwnProfile && (
+        {!isOwnProfile && profile?.subscriptionTier && (
           <button onClick={() => setShowSubModal(true)} style={{
             padding: '9px 16px', borderRadius: 20, fontSize: 13,
             fontWeight: 600, cursor: 'pointer', flexShrink: 0,
@@ -259,57 +278,17 @@ export default function UserProfile() {
             {subscription ? `⭐ ${subscription.tier.toUpperCase()}` : '⭐ Subscribe'}
           </button>
         )}
-
-        {/* Sub modal */}
-        {showSubModal && (
-          <div style={{
-            position: 'fixed', inset: 0, background: '#00000088',
-            zIndex: 1000, display: 'flex', alignItems: 'center',
-            justifyContent: 'center', padding: 24
-          }} onClick={() => setShowSubModal(false)}>
-            <div onClick={e => e.stopPropagation()} style={{
-              background: 'var(--bg2)', border: '1px solid var(--border)',
-              borderRadius: 20, padding: 28, width: '100%', maxWidth: 400
-            }}>
-              <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, marginBottom: 4 }}>
-                Subscribe to {profile.username}
-              </h3>
-              <p style={{ color: 'var(--text2)', fontSize: 13, marginBottom: 20 }}>
-                Choose a tier to support {profile.username}
-              </p>
-              {[
-                { tier: 'basic', price: 50, icon: '⭐', color: '#6366f1', perks: ['Subscriber badge', 'Support creator'] },
-                { tier: 'pro', price: 150, icon: '🔥', color: '#f59e0b', perks: ['Pro badge', 'Exclusive posts', 'Priority in chat'] },
-                { tier: 'vip', price: 300, icon: '👑', color: '#ef4444', perks: ['VIP badge', 'All Pro perks', 'Direct message access'] },
-              ].map(t => (
-                <div key={t.tier} onClick={() => subscribe(t.tier)} style={{
-                  border: `1px solid ${t.color}44`, borderRadius: 14,
-                  padding: '14px 16px', marginBottom: 10, cursor: 'pointer',
-                  transition: 'all 0.15s'
-                }}
-                  onMouseEnter={e => e.currentTarget.style.background = t.color + '11'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                    <span style={{ fontWeight: 800, fontSize: 15, color: t.color }}>
-                      {t.icon} {t.tier.toUpperCase()}
-                    </span>
-                    <span style={{ fontWeight: 800, color: t.color }}>{t.price} 🪙/month</span>
-                  </div>
-                  {t.perks.map(p => (
-                    <p key={p} style={{ fontSize: 12, color: 'var(--text2)' }}>✓ {p}</p>
-                  ))}
-                </div>
-              ))}
-              <button onClick={() => setShowSubModal(false)} style={{
-                width: '100%', padding: '10px', background: 'none',
-                color: 'var(--text2)', border: '1px solid var(--border)',
-                borderRadius: 10, cursor: 'pointer', fontSize: 13, marginTop: 8
-              }}>Cancel</button>
-            </div>
-          </div>
+        {!isOwnProfile && (
+          <button onClick={isBlocked ? unblockUser : blockUser} style={{
+            padding: '9px 18px',
+            background: isBlocked ? '#ef444422' : 'var(--bg3)',
+            color: isBlocked ? '#ef4444' : 'var(--text2)',
+            border: `1px solid ${isBlocked ? '#ef444444' : 'var(--border)'}`,
+            borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 600
+          }}>
+            {isBlocked ? '🚫 Blocked' : 'Block'}
+          </button>
         )}
-
         {/* Stats row */}
         <div style={{ display: 'flex', gap: 24 }}>
           <button onClick={() => setShowFollowers(true)} style={{
@@ -449,6 +428,87 @@ export default function UserProfile() {
           ))}
         </div>
       )}
+      {/* Sub modal */}
+      {showSubModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: '#00000088',
+          zIndex: 9999, display: 'flex', alignItems: 'center',
+          justifyContent: 'center', padding: 24
+        }} onClick={() => setShowSubModal(false)}>
+          <div onClick={e => e.stopPropagation()} style={{
+            background: 'var(--bg)', border: '1px solid var(--border)',
+            borderRadius: 24, padding: 28, width: '100%', maxWidth: 420
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+              <Avatar src={profile?.avatar} name={profile?.username} size={44} tier={profile?.subscriptionTier} />
+              <div>
+                <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800 }}>
+                  Subscribe to {profile?.name || profile?.username}
+                </h3>
+                <p style={{ color: 'var(--text2)', fontSize: 13 }}>Support your favourite creator</p>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+              {[
+                { months: 1, price: 99, label: '1 Month', badge: null, save: null },
+                { months: 3, price: 267, label: '3 Months', badge: '10% OFF', save: 'Save ₹30', color: '#6366f1' },
+                { months: 6, price: 475, label: '6 Months', badge: '20% OFF', save: 'Save ₹119', color: '#f59e0b' },
+              ].map(plan => (
+                <div key={plan.months} onClick={() => subscribe(plan.months, plan.price)}
+                  style={{
+                    border: `1px solid var(--border)`, borderRadius: 14,
+                    padding: '14px 16px', cursor: 'pointer',
+                    transition: 'all 0.15s', position: 'relative',
+                    background: 'var(--bg2)'
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.borderColor = 'var(--indigo)'
+                    e.currentTarget.style.background = 'var(--indigo-dim)'
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.borderColor = 'var(--border)'
+                    e.currentTarget.style.background = 'var(--bg2)'
+                  }}
+                >
+                  {plan.badge && (
+                    <div style={{
+                      position: 'absolute', top: -10, right: 14,
+                      background: plan.color, color: '#fff',
+                      padding: '2px 10px', borderRadius: 20,
+                      fontSize: 10, fontWeight: 800
+                    }}>{plan.badge}</div>
+                  )}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <p style={{ fontWeight: 700, fontSize: 15 }}>{plan.label}</p>
+                      {plan.save && <p style={{ fontSize: 11, color: plan.color, marginTop: 2 }}>{plan.save}</p>}
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <p style={{ fontWeight: 800, fontSize: 16 }}>₹{plan.price}</p>
+                      <p style={{ fontSize: 11, color: 'var(--text2)' }}>₹{Math.round(plan.price / plan.months)}/mo</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <p style={{ fontSize: 11, color: 'var(--text2)', textAlign: 'center', marginBottom: 16 }}>
+              Payments secured by Razorpay ⨃
+            </p>
+
+            <button onClick={() => setShowSubModal(false)} style={{
+              width: '100%', padding: '10px', background: 'none',
+              color: 'var(--text2)', border: '1px solid var(--border)',
+              borderRadius: 10, cursor: 'pointer', fontSize: 13
+            }}>Cancel</button>
+          </div>
+        </div>
+      )}
+
     </div>
+
   )
+
 }

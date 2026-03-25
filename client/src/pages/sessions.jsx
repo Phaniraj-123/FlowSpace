@@ -10,7 +10,7 @@ export default function Sessions() {
   const [sessions, setSessions] = useState([])
   const [activeSession, setActiveSession] = useState(null)
   const [title, setTitle] = useState('')
-  const [timeLeft, setTimeLeft] = useState(25 * 60)
+  const [timeLeft, setTimeLeft] = useState(60 * 60)
   const [isRunning, setIsRunning] = useState(false)
   const [phase, setPhase] = useState('work')
   const [participants, setParticipants] = useState([])
@@ -19,7 +19,7 @@ export default function Sessions() {
   const chatRef = useRef(null)
   const { token } = useAuthStore()
   const headers = { Authorization: `Bearer ${token}` }
-  const totalTime = phase === 'work' ? 25 * 60 : 5 * 60
+  const totalTime = phase === 'work' ? 60 * 60 : 5 * 60
   const progress = ((totalTime - timeLeft) / totalTime) * 100
 
   useEffect(() => {
@@ -46,23 +46,23 @@ export default function Sessions() {
     e.preventDefault()
     if (!title.trim()) return
     try {
-      const res = await axios.post('http://localhost:5000/api/sessions', { title, duration: 25 }, { headers })
+      const res = await axios.post('http://localhost:5000/api/sessions', { title, duration: 50 }, { headers })
       setActiveSession(res.data)
-      setTimeLeft(25 * 60)
+      setTimeLeft(60 * 60)
       setTitle('')
       socket.emit('join:room', { sessionId: res.data._id })
       fetchLiveSessions()
     } catch (err) { console.log(err) }
   }
 
-  function startTimer() { setIsRunning(true); socket.emit('timer:start', { sessionId: activeSession._id, duration: 25 }) }
+  function startTimer() { setIsRunning(true); socket.emit('timer:start', { sessionId: activeSession._id, duration: 60 }) }
   function pauseTimer() { setIsRunning(false); socket.emit('timer:pause', { sessionId: activeSession._id }) }
 
   async function endSession() {
     try {
       socket.emit('leave:room', { sessionId: activeSession._id })
       await axios.patch(`http://localhost:5000/api/sessions/${activeSession._id}/end`, {}, { headers })
-      setActiveSession(null); setIsRunning(false); setTimeLeft(25 * 60)
+      setActiveSession(null); setIsRunning(false); setTimeLeft(60 * 60)
       setParticipants([]); setMessages([])
       fetchLiveSessions()
     } catch (err) { console.log(err) }
@@ -138,15 +138,15 @@ export default function Sessions() {
                 animation: isRunning ? 'none' : 'pulse-ring 2s infinite'
               }}>
                 {isRunning ? <><Pause size={18} /> Pause</> : <><Play size={18} fill="#fff" /> Start</>}
-                </button>
-                <button onClick={endSession} style={{
-                  padding: '12px 20px', background: 'none',
-                  color: 'var(--text2)', border: '1px solid var(--border2)',
-                  borderRadius: 12, fontSize: 14, fontWeight: 600, cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', gap: 6
-                }}>
-                  <StopCircle size={16} /> End
-                </button>
+              </button>
+              <button onClick={endSession} style={{
+                padding: '12px 20px', background: 'none',
+                color: 'var(--text2)', border: '1px solid var(--border2)',
+                borderRadius: 12, fontSize: 14, fontWeight: 600, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: 6
+              }}>
+                <StopCircle size={16} /> End
+              </button>
             </div>
 
             {/* Participants */}
@@ -231,7 +231,7 @@ export default function Sessions() {
                 padding: '12px 28px', background: 'var(--indigo)',
                 color: '#fff', border: 'none', borderRadius: 12,
                 fontSize: 15, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap'
-              }}>🚀 Start</button>
+              }}> Start</button>
             </form>
           </div>
 
@@ -244,21 +244,30 @@ export default function Sessions() {
               textAlign: 'center', padding: 48, color: 'var(--text2)',
               background: 'var(--bg2)', borderRadius: 16, border: '1px solid var(--border)'
             }}>
-              <p>No live sessions right now. Be the first! 🚀</p>
+              <p>No live sessions right now. Be the first! </p>
             </div>
           )}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 14 }}>
             {sessions.map((session, i) => (
-              <div key={session._id} className="fade-up" style={{
-                background: 'var(--bg2)', border: '1px solid var(--border)',
-                borderRadius: 16, padding: 20, animationDelay: `${i * 0.06}s`
-              }}>
+              <div key={session._id} className="fade-up"
+                onClick={async () => {
+                  try {
+                    await axios.post(`http://localhost:5000/api/sessions/${session._id}/join`, {}, { headers })
+                    setActiveSession(session)
+                    socket.emit('join:room', { sessionId: session._id })
+                    setTimeLeft(60 * 60)
+                  } catch (err) { console.log(err) }
+                }}
+                style={{
+                  background: 'var(--bg2)', border: '1px solid var(--border)',
+                  borderRadius: 16, padding: 20, animationDelay: `${i * 0.06}s`
+                }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
                   <h4 style={{ fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 700 }}>{session.title}</h4>
                   <span style={{
                     background: '#ef444420', color: '#f87171',
                     padding: '3px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700
-                  }}>🔴 LIVE</span>
+                  }}>° LIVE</span>
                 </div>
                 <p style={{ color: 'var(--text2)', fontSize: 13, marginBottom: 12 }}>by {session.host?.username}</p>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>

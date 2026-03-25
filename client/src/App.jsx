@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import axios from 'axios'
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom'
 import Register from './pages/Register'
 import Login from './pages/Login'
 import Goals from './pages/Goals'
@@ -23,14 +23,17 @@ import CreatorSubscription from './pages/CreatorSubscription'
 import { LiveStreamProvider } from './context/LiveStreamContext'
 import Settings from './pages/Settings'
 
-
+// apply saved theme on load
+const savedTheme = localStorage.getItem('theme') || 'dark'
+document.documentElement.setAttribute('data-theme', savedTheme)
 
 
 function Layout() {
 
   const location = useLocation()
   const hideNavbar = ['/login', '/register', '/'].includes(location.pathname)
-  const { token, user, updateUser } = useAuthStore()
+  const { token, user, updateUser, logout } = useAuthStore()
+  const navigate = useNavigate()
 
   useEffect(() => {
     if (token && user) {
@@ -42,12 +45,20 @@ function Layout() {
           bio: res.data.bio,
           username: res.data.username,
           email: res.data.email,
-          subscriptionTier: res.data.subscriptionTier
+          subscriptionTier: res.data.subscriptionTier,
+          name: res.data.name
         })
-      }).catch(err => console.log(err))
+      }).catch(err => {
+        // if 401 — token expired, log out
+        if (err.response?.status === 401) {
+          logout()
+          navigate('/login')
+        }
+      })
+    }else if (!token && !user) {
+    navigate('/login')
     }
   }, [token])
-
   return (
     <>
       {user && !hideNavbar && <Navbar />}

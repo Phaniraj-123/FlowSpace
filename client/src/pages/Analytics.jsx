@@ -22,7 +22,7 @@ export default function Analytics() {
       const [statsRes, sessionsRes, goalsRes] = await Promise.all([
         axios.get('http://localhost:5000/api/users/me/stats', { headers }),
         axios.get('http://localhost:5000/api/sessions/history', { headers }),
-        axios.get('http://localhost:5000/api/goals', { headers })
+        axios.get('http://localhost:5000/api/goals/me', { headers })
       ])
       setStats(statsRes.data)
       setSessions(sessionsRes.data)

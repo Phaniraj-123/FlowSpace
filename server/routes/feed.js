@@ -161,14 +161,14 @@ router.post('/:id/comments/:commentId/like', protect, async (req, res) => {
 })
 
 // DELETE post
-router.delete('/:id', protect, async (req, res) => {
-  try {
-    await Post.findOneAndDelete({ _id: req.params.id, author: req.user._id })
-    res.json({ message: 'Post deleted' })
-  } catch (err) {
-    res.status(500).json({ error: err.message })
-  }
-})
+// router.delete('/:id', protect, async (req, res) => {
+//   try {
+//     await Post.findOneAndDelete({ _id: req.params.id, author: req.user._id })
+//     res.json({ message: 'Post deleted' })
+//   } catch (err) {
+//     res.status(500).json({ error: err.message })
+//   }
+// })
 
 // GET posts by username
 router.get('/user/:username', async (req, res) => {
@@ -181,6 +181,24 @@ router.get('/user/:username', async (req, res) => {
       .populate('comments.user', 'username avatar subscriptionTier')
       .sort({ createdAt: -1 })
     res.json(posts)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+router.delete('/:postId', protect, async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.postId)
+    if (!post) return res.status(404).json({ error: 'Post not found' })
+
+    const isAuthor = post.author.toString() === req.user._id.toString()
+    const isAdmin = req.user.isAdmin
+
+    if (!isAuthor && !isAdmin)
+      return res.status(403).json({ error: 'Not authorized' })
+
+    await Post.findByIdAndDelete(req.params.postId)
+    res.json({ success: true })
   } catch (err) {
     res.status(500).json({ error: err.message })
   }

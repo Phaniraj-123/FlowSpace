@@ -50,7 +50,7 @@ export default function Navbar() {
   async function fetchUnread() {
     try {
       const token = useAuthStore.getState().token
-      const res = await axios.get('http://localhost:5000/api/notifications/unread-count', {
+      const res = await axios.get('http://localhost:5000/api/notifications/unread', {
         headers: { Authorization: `Bearer ${token}` }
       })
       setUnread(res.data.count || 0)
