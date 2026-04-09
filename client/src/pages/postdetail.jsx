@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import { useAuthStore } from '../store/authStore'
 import Avatar from '../components/Avatar'
+import API from "../api"
 
 export default function PostDetail() {
     const { id } = useParams()
@@ -20,7 +21,7 @@ export default function PostDetail() {
 
     async function fetchPost() {
         try {
-            const res = await axios.get(`http://localhost:5000/api/feed/${id}`, { headers })
+            const res = await axios.get(`${API}/api/feed/${id}`, { headers })
             setPost(res.data)
         } catch (err) { console.log(err) }
         finally { setLoading(false) }
@@ -28,7 +29,7 @@ export default function PostDetail() {
 
     async function likePost() {
         try {
-            await axios.post(`http://localhost:5000/api/feed/${id}/like`, {}, { headers })
+            await axios.post(`${API}/api/feed/${id}/like`, {}, { headers })
             fetchPost()
         } catch (err) { console.log(err) }
     }
@@ -36,7 +37,7 @@ export default function PostDetail() {
     async function submitComment() {
         if (!commentText.trim()) return
         try {
-            await axios.post(`http://localhost:5000/api/feed/${id}/comments`,
+            await axios.post(`${API}/api/feed/${id}/comments`,
                 { text: commentText },
                 { headers }) // ← headers here too
             setCommentText('')
@@ -48,7 +49,7 @@ export default function PostDetail() {
         const text = replyText[commentId]
         if (!text?.trim()) return
         try {
-            await axios.post(`http://localhost:5000/api/feed/${id}/comments`,
+            await axios.post(`${API}/api/feed/${id}/comments`,
                 { text: `@${username} ${text}`, parentComment: commentId },
                 { headers }) // ← headers is here
             setReplyText({ ...replyText, [commentId]: '' })
@@ -59,7 +60,7 @@ export default function PostDetail() {
 
     async function likeComment(commentId) {
         try {
-            await axios.post(`http://localhost:5000/api/feed/${id}/comments/${commentId}/like`,
+            await axios.post(`${API}/api/feed/${id}/comments/${commentId}/like`,
                 {}, { headers })
             fetchPost()
         } catch (err) { console.log(err) }

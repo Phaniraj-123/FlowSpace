@@ -2,6 +2,8 @@ import { useState } from 'react'
 import axios from 'axios'
 import { useAuthStore } from '../store/authStore'
 import { useNavigate } from 'react-router-dom'
+import API from "../api"
+
 
 export default function Register() {
   const [form, setForm] = useState({ username: '', email: '', phone: '', password: '' })
@@ -22,7 +24,7 @@ export default function Register() {
 
     setLoading(true)
     try {
-      const res = await axios.post('http://localhost:5000/api/auth/register', form)
+      const res = await axios.post('${API}/api/auth/register', form)
       login(res.data.user, res.data.accessToken)
       navigate('/live')
     } catch (err) {

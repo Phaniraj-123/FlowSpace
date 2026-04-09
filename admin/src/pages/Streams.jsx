@@ -7,13 +7,13 @@ export default function Streams({ token }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    axios.get('http://localhost:5000/api/admin/streams', { headers })
+    axios.get('${API}/api/admin/streams', { headers })
       .then(res => setStreams(res.data))
       .finally(() => setLoading(false))
   }, [])
 
   async function endStream(id) {
-    await axios.patch(`http://localhost:5000/api/admin/streams/${id}/end`, {}, { headers })
+    await axios.patch(`${API}/api/admin/streams/${id}/end`, {}, { headers })
     setStreams(streams.map(s => s._id === id ? { ...s, isLive: false } : s))
   }
 

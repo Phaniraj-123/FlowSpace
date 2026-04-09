@@ -6,6 +6,8 @@ import Avatar from '../components/Avatar'
 import SimplePeer from 'simple-peer'
 import { Heart, Send, Users, X, Mic, MicOff, ChevronDown, MessageCircle, Minimize2, Volume2, VolumeX } from 'lucide-react'
 import { useLiveStream } from '../context/LiveStreamContext'
+import API from "../api"
+
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768)
@@ -119,7 +121,7 @@ export default function LiveStreamRoom() {
 
   async function fetchStream() {
     try {
-      const res = await axios.get(`http://localhost:5000/api/livestream/${id}`, { headers })
+      const res = await axios.get(`${API}/api/livestream/${id}`, { headers })
       setStream(res.data)
       setMessages(res.data.messages || [])
       setViewerCount(res.data.viewerCount || 0)
@@ -133,7 +135,7 @@ export default function LiveStreamRoom() {
 
   async function fetchWallet() {
     try {
-      const res = await axios.get('http://localhost:5000/api/livestream/wallet/me', { headers })
+      const res = await axios.get('${API}/api/livestream/wallet/me', { headers })
       setWallet(res.data)
     } catch (err) { console.log(err) }
   }
@@ -209,7 +211,7 @@ export default function LiveStreamRoom() {
       if (localStreamRef.current) { localStreamRef.current.getTracks().forEach(t => t.stop()); localStreamRef.current = null }
       if (localVideoRef.current) localVideoRef.current.srcObject = null
       endStream(id)
-      await axios.post(`http://localhost:5000/api/livestream/${id}/end`, {}, { headers })
+      await axios.post(`${API}/api/livestream/${id}/end`, {}, { headers })
       navigate('/live')
     } catch (err) { console.log(err); navigate('/live') }
   }
@@ -229,7 +231,7 @@ export default function LiveStreamRoom() {
   async function sendDonation() {
     if (!donateAmount) return
     try {
-      const res = await axios.post(`http://localhost:5000/api/livestream/${id}/donate`,
+      const res = await axios.post(`${API}/api/livestream/${id}/donate`,
         { amount: donateAmount, message: donateMsg }, { headers })
       setWallet(prev => ({ ...prev, balance: res.data.newBalance }))
       const socket = getSocket()
@@ -243,7 +245,7 @@ export default function LiveStreamRoom() {
   async function purchasePPV() {
     setPurchasingPPV(true)
     try {
-      await axios.post(`http://localhost:5000/api/livestream/${id}/purchase-ppv`, {}, { headers })
+      await axios.post(`${API}/api/livestream/${id}/purchase-ppv`, {}, { headers })
       setHasPPVAccess(true)
     } catch (err) { alert(err.response?.data?.error || 'Purchase failed') }
     finally { setPurchasingPPV(false) }

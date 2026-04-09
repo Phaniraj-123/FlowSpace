@@ -7,7 +7,7 @@ export default function Transactions({ token }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    axios.get('http://localhost:5000/api/admin/transactions', { headers })
+    axios.get('${API}/api/admin/transactions', { headers })
       .then(res => setTransactions(res.data))
       .finally(() => setLoading(false))
   }, [])

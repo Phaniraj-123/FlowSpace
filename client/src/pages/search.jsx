@@ -3,6 +3,8 @@ import axios from 'axios'
 import { useAuthStore } from '../store/authStore'
 import { useNavigate } from 'react-router-dom'
 import Avatar, { TierBadge } from '../components/Avatar'
+import API from "../api"
+
 
 export default function Search() {
   const [query, setQuery] = useState('')
@@ -21,7 +23,7 @@ export default function Search() {
     if (!val.trim()) { setResults([]); setPosts([]); return }
     setLoading(true)
     try {
-      const res = await axios.get(`http://localhost:5000/api/users/search/${val}`, { headers })
+      const res = await axios.get(`${API}/api/users/search/${val}`, { headers })
       if (res.data.users) {
         setResults(res.data.users)
         setPosts(res.data.posts || [])
@@ -42,14 +44,14 @@ export default function Search() {
 
   async function followUser(userId) {
     try {
-      await axios.post(`http://localhost:5000/api/users/${userId}/follow`, {}, { headers })
+      await axios.post(`${API}/api/users/${userId}/follow`, {}, { headers })
       setFollowed({ ...followed, [userId]: true })
     } catch (err) { console.log(err) }
   }
 
   async function unfollowUser(userId) {
     try {
-      await axios.delete(`http://localhost:5000/api/users/${userId}/follow`, { headers })
+      await axios.delete(`${API}/api/users/${userId}/follow`, { headers })
       setFollowed({ ...followed, [userId]: false })
     } catch (err) { console.log(err) }
   }

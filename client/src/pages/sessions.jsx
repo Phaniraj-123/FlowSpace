@@ -3,6 +3,8 @@ import axios from 'axios'
 import { io } from 'socket.io-client'
 import { useAuthStore } from '../store/authStore'
 import { Play, Pause, StopCircle, Send } from 'lucide-react'
+import API from "../api"
+
 
 let socket = null
 
@@ -24,7 +26,7 @@ export default function Sessions() {
 
   useEffect(() => {
     fetchLiveSessions()
-    socket = io('http://localhost:5000', { auth: { token } })
+    socket = io('${API}', { auth: { token } })
     socket.on('room:updated', (data) => { if (data.participants) setParticipants(data.participants) })
     socket.on('timer:tick', ({ remaining }) => setTimeLeft(remaining))
     socket.on('timer:done', () => { setIsRunning(false); setPhase(p => p === 'work' ? 'break' : 'work') })
@@ -37,7 +39,7 @@ export default function Sessions() {
 
   async function fetchLiveSessions() {
     try {
-      const res = await axios.get('http://localhost:5000/api/sessions/live')
+      const res = await axios.get('${API}/api/sessions/live')
       setSessions(res.data)
     } catch (err) { console.log(err) }
   }
@@ -46,7 +48,7 @@ export default function Sessions() {
     e.preventDefault()
     if (!title.trim()) return
     try {
-      const res = await axios.post('http://localhost:5000/api/sessions', { title, duration: 50 }, { headers })
+      const res = await axios.post('${API}/api/sessions', { title, duration: 50 }, { headers })
       setActiveSession(res.data)
       setTimeLeft(60 * 60)
       setTitle('')
@@ -61,7 +63,7 @@ export default function Sessions() {
   async function endSession() {
     try {
       socket.emit('leave:room', { sessionId: activeSession._id })
-      await axios.patch(`http://localhost:5000/api/sessions/${activeSession._id}/end`, {}, { headers })
+      await axios.patch(`${API}/api/sessions/${activeSession._id}/end`, {}, { headers })
       setActiveSession(null); setIsRunning(false); setTimeLeft(60 * 60)
       setParticipants([]); setMessages([])
       fetchLiveSessions()
@@ -252,7 +254,7 @@ export default function Sessions() {
               <div key={session._id} className="fade-up"
                 onClick={async () => {
                   try {
-                    await axios.post(`http://localhost:5000/api/sessions/${session._id}/join`, {}, { headers })
+                    await axios.post(`${API}/api/sessions/${session._id}/join`, {}, { headers })
                     setActiveSession(session)
                     socket.emit('join:room', { sessionId: session._id })
                     setTimeLeft(60 * 60)

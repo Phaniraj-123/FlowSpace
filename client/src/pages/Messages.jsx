@@ -5,6 +5,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { io } from 'socket.io-client'
 import { Send, Search, ArrowLeft, MessageCircle, Image, Mic, Camera, Smile, Trash2, CornerUpLeft, X } from 'lucide-react'
 import Avatar from '../components/Avatar'
+import API from "../api"
 
 let socket
 
@@ -57,7 +58,7 @@ export default function Messages() {
   }, [messages])
 
   function setupSocket() {
-    socket = io('http://localhost:5000', { auth: { token } })
+    socket = io('${API}', { auth: { token } })
     socket.on('dm:message', (message) => {
       setMessages(prev => {
         if (prev.find(m => m._id === message._id)) return prev
@@ -71,7 +72,7 @@ export default function Messages() {
 
   async function fetchConversations() {
     try {
-      const res = await axios.get('http://localhost:5000/api/messages/conversations', { headers })
+      const res = await axios.get('${API}/api/messages/conversations', { headers })
       setConversations(res.data)
     } catch (err) { console.log(err) }
     finally { setLoading(false) }
@@ -81,7 +82,7 @@ export default function Messages() {
     try {
       if (activeConv) socket?.emit('dm:leave', activeConv._id)
       const res = await axios.get(
-        `http://localhost:5000/api/messages/conversations/${id}/messages`, { headers }
+        `${API}/api/messages/conversations/${id}/messages`, { headers }
       )
       const conv = conversations.find(c => c._id === id)
       setActiveConv(conv || { _id: id })
@@ -95,7 +96,7 @@ export default function Messages() {
 
   async function startConversation(userId) {
     try {
-      const res = await axios.post('http://localhost:5000/api/messages/conversations',
+      const res = await axios.post('${API}/api/messages/conversations',
         { userId }, { headers })
       setSearchQuery('')
       setSearchResults([])
@@ -115,7 +116,7 @@ export default function Messages() {
         formData.append('media', mediaFile)
         if (replyTo) formData.append('replyTo', replyTo._id)
         await axios.post(
-          `http://localhost:5000/api/messages/conversations/${activeConv._id}/messages`,
+          `${API}/api/messages/conversations/${activeConv._id}/messages`,
           formData,
           { headers: { ...headers, 'Content-Type': 'multipart/form-data' } }
         )
@@ -137,7 +138,7 @@ export default function Messages() {
 
   async function deleteMessage(msgId) {
     try {
-      await axios.delete(`http://localhost:5000/api/messages/${msgId}`, { headers })
+      await axios.delete(`${API}/api/messages/${msgId}`, { headers })
       socket?.emit('dm:delete', { conversationId: activeConv._id, messageId: msgId })
       setMessages(prev => prev.filter(m => m._id !== msgId))
       // refresh conversations to update sidebar
@@ -170,7 +171,7 @@ export default function Messages() {
           if (replyTo) formData.append('replyTo', replyTo?._id)
 
           await axios.post(
-            `http://localhost:5000/api/messages/conversations/${activeConv._id}/messages`,
+            `${API}/api/messages/conversations/${activeConv._id}/messages`,
             formData,
             { headers: { ...headers, 'Content-Type': 'multipart/form-data' } }
           )
@@ -202,7 +203,7 @@ export default function Messages() {
     setSearchQuery(val)
     if (!val.trim()) return setSearchResults([])
     try {
-      const res = await axios.get(`http://localhost:5000/api/users/search/${val}`, { headers })
+      const res = await axios.get(`${API}/api/users/search/${val}`, { headers })
       setSearchResults(res.data.users)
     } catch (err) { console.log(err) }
   }

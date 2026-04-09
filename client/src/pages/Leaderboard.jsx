@@ -4,6 +4,8 @@ import { useAuthStore } from '../store/authStore'
 import { useNavigate } from 'react-router-dom'
 import { Trophy, Clock, Users, Flame, Lock, Star } from 'lucide-react'
 import Avatar from '../components/Avatar'
+import API from "../api"
+
 
 export default function Leaderboard() {
   const { token, user: me } = useAuthStore()
@@ -21,8 +23,8 @@ export default function Leaderboard() {
     setLoading(true)
     try {
       const [lbRes, achRes] = await Promise.all([
-        axios.get(`http://localhost:5000/api/leaderboard?type=${lbType}`, { headers }),
-        axios.get('http://localhost:5000/api/leaderboard/achievements', { headers })
+        axios.get(`${API}/api/leaderboard?type=${lbType}`, { headers }),
+        axios.get('${API}/api/leaderboard/achievements', { headers })
       ])
       setLeaderboard(lbRes.data)
       setAchievements(achRes.data)

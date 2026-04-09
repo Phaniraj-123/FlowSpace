@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import axios from 'axios'
 import { useAuthStore } from '../store/authStore'
 import { useNavigate } from 'react-router-dom'
+import API from "../api"
+
 
 const TIER_INFO = {
   yellow: { color: '#f59e0b', emoji: '🟡', name: 'Yellow', price: '₹399/month', priceINR: 39900, split: '50/50', perks: ['Subscriber badge', 'Support creator', 'Basic perks'] },
@@ -26,7 +28,7 @@ export default function CreatorSubscription() {
   // Only used to auto-award yellow if eligible — does NOT block anything
   async function checkAutoAward() {
     try {
-      const res = await axios.post('http://localhost:5000/api/plans/check-tick', {}, { headers })
+      const res = await axios.post('${API}/api/plans/check-tick', {}, { headers })
       if (res.data.awarded && !currentTier) {
         setCurrentTier(res.data.tier)
         updateUser({ subscriptionTier: res.data.tier })
@@ -40,7 +42,7 @@ export default function CreatorSubscription() {
     try {
       const freshToken = useAuthStore.getState().token
 
-      const orderRes = await axios.post('http://localhost:5000/api/plans/activate-tier',
+      const orderRes = await axios.post('${API}/api/plans/activate-tier',
         { tier },
         { headers: { Authorization: `Bearer ${freshToken}` } }
       )
@@ -56,7 +58,7 @@ export default function CreatorSubscription() {
         order_id: orderId,
         handler: async function (response) {
           const freshToken2 = useAuthStore.getState().token
-          const verifyRes = await axios.post('http://localhost:5000/api/plans/activate-tier/verify', {
+          const verifyRes = await axios.post('${API}/api/plans/activate-tier/verify', {
             razorpay_order_id: response.razorpay_order_id,
             razorpay_payment_id: response.razorpay_payment_id,
             razorpay_signature: response.razorpay_signature,

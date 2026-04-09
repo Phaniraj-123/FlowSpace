@@ -2,6 +2,7 @@ import { useState } from 'react'
 import axios from 'axios'
 import { useAuthStore } from '../store/authStore'
 import { useNavigate } from 'react-router-dom'
+import API from "../api"
 
 export default function Login() {
   const [form, setForm] = useState({ identifier: '', password: '' })
@@ -14,7 +15,7 @@ export default function Login() {
     e.preventDefault()
     setLoading(true)
     try {
-      const res = await axios.post('http://localhost:5000/api/auth/login', form)
+      const res = await axios.post('${API}/api/auth/login', form)
       login(res.data.user, res.data.accessToken)
       navigate('/live')
     } catch (err) {

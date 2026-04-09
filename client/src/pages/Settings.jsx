@@ -4,6 +4,8 @@ import { useAuthStore } from '../store/authStore'
 import { useNavigate } from 'react-router-dom'
 import Avatar from '../components/Avatar'
 import { Moon, Bell, Lock, Trash2, Key, Monitor, User } from 'lucide-react'
+import API from "../api"
+
 
 export default function Settings() {
   const { token, user, updateUser, logout } = useAuthStore()
@@ -35,13 +37,13 @@ export default function Settings() {
 
   async function fetchSettings() {
     try {
-      const res = await axios.get('http://localhost:5000/api/settings', { headers })
+      const res = await axios.get('${API}/api/settings', { headers })
       setTheme(res.data.settings?.theme || 'dark')
       setNotifs(res.data.settings?.notifications || notifs)
       setPrivacy(res.data.settings?.privacy || privacy)
       setBlockedUsers(res.data.blockedUsers || [])
       setSessions(res.data.sessions || [])
-      const meRes = await axios.get('http://localhost:5000/api/users/me', { headers })
+      const meRes = await axios.get('${API}/api/users/me', { headers })
       setDisplayName(meRes.data.name || '')
       setNewUsername(meRes.data.username || '')
     } catch (err) { console.log(err) }
@@ -54,11 +56,11 @@ export default function Settings() {
     setSaving(true)
     try {
       const freshToken = useAuthStore.getState().token
-      const res = await axios.put('http://localhost:5000/api/settings/profile',
+      const res = await axios.put('${API}/api/settings/profile',
         { name: displayName, username: newUsername },
         { headers: { Authorization: `Bearer ${freshToken}` } })
       updateUser({ name: res.data.name, username: res.data.username })
-      setProfileMsg('✅ Profile updated!')
+      setProfileMsg(' Profile updated!')
     } catch (err) {
       setProfileMsg(err.response?.data?.error || 'Failed to update profile')
     } finally { setSaving(false) }
@@ -69,15 +71,15 @@ export default function Settings() {
     document.documentElement.setAttribute('data-theme', newTheme)
     localStorage.setItem('theme', newTheme)
     try {
-      await axios.put('http://localhost:5000/api/settings/theme', { theme: newTheme }, { headers })
+      await axios.put('${API}/api/settings/theme', { theme: newTheme }, { headers })
     } catch (err) { console.log(err) }
   }
 
   async function saveNotifications() {
     setSaving(true)
     try {
-      await axios.put('http://localhost:5000/api/settings/notifications', { notifications: notifs }, { headers })
-      alert('✅ Notification settings saved!')
+      await axios.put('${API}/api/settings/notifications', { notifications: notifs }, { headers })
+      alert(' Notification settings saved!')
     } catch (err) { console.log(err) }
     finally { setSaving(false) }
   }
@@ -85,8 +87,8 @@ export default function Settings() {
   async function savePrivacy() {
     setSaving(true)
     try {
-      await axios.put('http://localhost:5000/api/settings/privacy', { privacy }, { headers })
-      alert('✅ Privacy settings saved!')
+      await axios.put('${API}/api/settings/privacy', { privacy }, { headers })
+      alert(' Privacy settings saved!')
     } catch (err) { console.log(err) }
     finally { setSaving(false) }
   }
@@ -97,8 +99,8 @@ export default function Settings() {
     if (newPassword.length < 6) return setPasswordMsg('Password must be at least 6 characters')
     setSaving(true)
     try {
-      await axios.put('http://localhost:5000/api/settings/password', { currentPassword, newPassword }, { headers })
-      setPasswordMsg('✅ Password changed successfully!')
+      await axios.put('${API}/api/settings/password', { currentPassword, newPassword }, { headers })
+      setPasswordMsg(' Password changed successfully!')
       setCurrentPassword(''); setNewPassword(''); setConfirmPassword('')
     } catch (err) {
       setPasswordMsg(err.response?.data?.error || 'Failed to change password')
@@ -107,14 +109,14 @@ export default function Settings() {
 
   async function unblockUser(userId) {
     try {
-      await axios.delete(`http://localhost:5000/api/settings/block/${userId}`, { headers })
+      await axios.delete(`${API}/api/settings/block/${userId}`, { headers })
       setBlockedUsers(prev => prev.filter(u => u._id !== userId))
     } catch (err) { console.log(err) }
   }
 
   async function revokeSession(sessionId) {
     try {
-      await axios.delete(`http://localhost:5000/api/settings/sessions/${sessionId}`, { headers })
+      await axios.delete(`${API}/api/settings/sessions/${sessionId}`, { headers })
       setSessions(prev => prev.filter(s => s._id !== sessionId))
     } catch (err) { console.log(err) }
   }
@@ -122,7 +124,7 @@ export default function Settings() {
   async function deleteAccount() {
     if (!deletePassword) return alert('Enter your password')
     try {
-      await axios.delete('http://localhost:5000/api/settings/account', { data: { password: deletePassword }, headers })
+      await axios.delete('${API}/api/settings/account', { data: { password: deletePassword }, headers })
       logout(); navigate('/login')
     } catch (err) { alert(err.response?.data?.error || 'Failed to delete account') }
   }

@@ -5,6 +5,8 @@ import { useNavigate } from 'react-router-dom'
 import Avatar from '../components/Avatar'
 import { Radio, Users, Heart, Search, X } from 'lucide-react'
 import { useLiveStream } from '../context/LiveStreamContext'
+import API from "../api"
+
 
 const CATEGORIES = ['All', 'Gaming', 'Music', 'Study', 'Art', 'Tech', 'Just Chatting', 'Sports', 'Food']
 const SORTS = [
@@ -54,7 +56,7 @@ export default function LiveStreams() {
       if (q) params.append('search', q)
       if (cat && cat !== 'All') params.append('category', cat)
       if (s) params.append('sort', s)
-      const res = await axios.get(`http://localhost:5000/api/livestream?${params}`, { headers })
+      const res = await axios.get(`${API}/api/livestream?${params}`, { headers })
       setStreams(res.data)
     } catch (err) { console.log(err) }
     finally { setLoading(false) }
@@ -63,7 +65,7 @@ export default function LiveStreams() {
   async function fetchStreamKey() {
     try {
       const freshToken = useAuthStore.getState().token
-      const res = await axios.get('http://localhost:5000/api/users/me/stream-key', {
+      const res = await axios.get('${API}/api/users/me/stream-key', {
         headers: { Authorization: `Bearer ${freshToken}` }
       })
       setStreamKey(res.data.streamKey)
@@ -74,7 +76,7 @@ export default function LiveStreams() {
     if (!confirm('Regenerate stream key? Your old key will stop working.')) return
     try {
       const freshToken = useAuthStore.getState().token
-      const res = await axios.post('http://localhost:5000/api/users/me/stream-key/regenerate', {}, {
+      const res = await axios.post('${API}/api/users/me/stream-key/regenerate', {}, {
         headers: { Authorization: `Bearer ${freshToken}` }
       })
       setStreamKey(res.data.streamKey)
@@ -91,7 +93,7 @@ export default function LiveStreams() {
       formData.append('category', category)
       formData.append('isPPV', isPPV)
       formData.append('ppvPrice', ppvPrice)
-      const res = await axios.post('http://localhost:5000/api/livestream/start',
+      const res = await axios.post('${API}/api/livestream/start',
         formData, { headers: { ...headers, 'Content-Type': 'multipart/form-data' } })
       navigate(`/live/${res.data._id}?host=true`)
     } catch (err) { console.log(err) }

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import axios from 'axios'
 import { useAuthStore } from '../store/authStore'
 import { Plus, Trash2, CheckCircle2, Circle } from 'lucide-react'
+import API from "../api"
 
 export default function Goals() {
   const [goals, setGoals] = useState([])
@@ -16,7 +17,7 @@ export default function Goals() {
 
   async function fetchGoals() {
     try {
-      const res = await axios.get('http://localhost:5000/api/goals/me', { headers })
+      const res = await axios.get('${API}/api/goals/me', { headers })
       setGoals(res.data)
     } catch (err) { console.log(err) }
   }
@@ -25,7 +26,7 @@ export default function Goals() {
     e.preventDefault()
     try {
       const taskList = tasks.split(',').map(t => ({ text: t.trim() })).filter(t => t.text)
-      await axios.post('http://localhost:5000/api/goals', { title, description, tasks: taskList }, { headers })
+      await axios.post('${API}/api/goals', { title, description, tasks: taskList }, { headers })
       setTitle(''); setDescription(''); setTasks(''); setShowForm(false)
       fetchGoals()
     } catch (err) { console.log(err) }
@@ -33,14 +34,14 @@ export default function Goals() {
 
   async function completeTask(goalId, taskId) {
     try {
-      const res = await axios.patch(`http://localhost:5000/api/goals/${goalId}/tasks/${taskId}`, {}, { headers })
+      const res = await axios.patch(`${API}/api/goals/${goalId}/tasks/${taskId}`, {}, { headers })
       setGoals(goals.map(g => g._id === goalId ? res.data : g))
     } catch (err) { console.log(err) }
   }
 
   async function deleteGoal(goalId) {
     try {
-      await axios.delete(`http://localhost:5000/api/goals/${goalId}`, { headers })
+      await axios.delete(`${API}/api/goals/${goalId}`, { headers })
       setGoals(goals.filter(g => g._id !== goalId))
     } catch (err) { console.log(err) }
   }

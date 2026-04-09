@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import { Heart, MessageCircle, Image, Trash2, Share2, Link, Zap, X, Plus } from 'lucide-react'
 import Avatar, { TierBadge } from '../components/Avatar'
 import ImageViewer from '../components/ImageViewer'
+import API from "../api"
 
 export default function Feed() {
   const [posts, setPosts] = useState([])
@@ -36,7 +37,7 @@ export default function Feed() {
 
   async function fetchFeed() {
     try {
-      const res = await axios.get('http://localhost:5000/api/feed', { headers })
+      const res = await axios.get('${API}/api/feed', { headers })
       setPosts(res.data.posts)
     } catch (err) { console.log(err) }
     finally { setLoading(false) }
@@ -44,7 +45,7 @@ export default function Feed() {
 
   async function fetchSuggestions() {
     try {
-      const res = await axios.get('http://localhost:5000/api/users/me/suggestions', { headers })
+      const res = await axios.get('${API}/api/users/me/suggestions', { headers })
       setSuggestions(res.data)
     } catch (err) { console.log(err) }
   }
@@ -56,7 +57,7 @@ export default function Feed() {
       const formData = new FormData()
       formData.append('content', content)
       if (mediaFile) formData.append('media', mediaFile)
-      const res = await axios.post('http://localhost:5000/api/feed', formData, {
+      const res = await axios.post('${API}/api/feed', formData, {
         headers: { ...headers, 'Content-Type': 'multipart/form-data' }
       })
       setPosts([res.data, ...posts])
@@ -69,7 +70,7 @@ export default function Feed() {
 
   async function likePost(postId) {
     try {
-      const res = await axios.post(`http://localhost:5000/api/feed/${postId}/like`, {}, { headers })
+      const res = await axios.post(`${API}/api/feed/${postId}/like`, {}, { headers })
       setPosts(posts.map(p => p._id === postId ? {
         ...p,
         likes: res.data.isLiked
@@ -82,7 +83,7 @@ export default function Feed() {
   async function submitComment(postId) {
     if (!commentText.trim()) return
     try {
-      const res = await axios.post(`http://localhost:5000/api/feed/${postId}/comments`,
+      const res = await axios.post(`${API}/api/feed/${postId}/comments`,
         { text: commentText }, { headers })
       setPosts(posts.map(p => p._id === postId ? res.data : p))
       setCommentText('')
@@ -91,7 +92,7 @@ export default function Feed() {
 
   async function followUser(userId) {
     try {
-      await axios.post(`http://localhost:5000/api/users/${userId}/follow`, {}, { headers })
+      await axios.post(`${API}/api/users/${userId}/follow`, {}, { headers })
       setSuggestions(suggestions.filter(s => s._id !== userId))
     } catch (err) { console.log(err) }
   }
@@ -99,7 +100,7 @@ export default function Feed() {
   async function deletePost(postId) {
     if (!confirm('Delete this post?')) return
     try {
-      await axios.delete(`http://localhost:5000/api/feed/${postId}`, { headers })
+      await axios.delete(`${API}/api/feed/${postId}`, { headers })
       setPosts(prev => prev.filter(p => p._id !== postId))
     } catch (err) {
       alert(err.response?.data?.error || 'Failed to delete')
@@ -116,7 +117,7 @@ export default function Feed() {
     setSharePost(postId)
     setSharePostId(null)
     try {
-      const res = await axios.get('http://localhost:5000/api/messages/conversations', { headers })
+      const res = await axios.get('${API}/api/messages/conversations', { headers })
       setConversations(res.data)
     } catch (err) { console.log(err) }
     setShowDMModal(true)
@@ -125,7 +126,7 @@ export default function Feed() {
   async function sendPostDM(conversationId) {
     try {
       const postUrl = `${window.location.origin}/post/${sharePost}`
-      await axios.post(`http://localhost:5000/api/messages/${conversationId}`,
+      await axios.post(`${API}/api/messages/${conversationId}`,
         { content: `Check out this post: ${postUrl}` }, { headers })
       setShowDMModal(false)
       alert('✅ Shared!')
@@ -227,7 +228,7 @@ export default function Feed() {
                   <button onClick={async (e) => {
                     e.stopPropagation()
                     try {
-                      await axios.post(`http://localhost:5000/api/monetization/boost/${post._id}`, {}, { headers })
+                      await axios.post(`${API}/api/monetization/boost/${post._id}`, {}, { headers })
                       alert('⚡ Post boosted for 24 hours!')
                     } catch (err) {
                       alert(err.response?.data?.error || 'Boost failed')

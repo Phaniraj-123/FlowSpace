@@ -3,6 +3,8 @@ import axios from 'axios'
 import { useAuthStore } from '../store/authStore'
 import { useNavigate } from 'react-router-dom'
 import { Radio, Users, Heart, MessageCircle, Clock, TrendingUp, Zap, DollarSign } from 'lucide-react'
+import API from "../api"
+
 
 function formatDuration(seconds) {
     if (!seconds) return '0m'
@@ -20,7 +22,7 @@ export default function StreamAnalytics() {
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        axios.get('http://localhost:5000/api/livestream/analytics/me', { headers })
+        axios.get('${API}/api/livestream/analytics/me', { headers })
             .then(res => setData(res.data))
             .catch(err => console.log(err))
             .finally(() => setLoading(false))

@@ -2,6 +2,8 @@ import { createContext, useContext, useRef, useState, useCallback } from 'react'
 import SimplePeer from 'simple-peer'
 import { io } from 'socket.io-client'
 import { useAuthStore } from '../store/authStore'
+import API from "../api"
+
 
 const LiveStreamContext = createContext(null)
 
@@ -9,7 +11,7 @@ export function LiveStreamProvider({ children, socket }) {
   const socketRef = useRef(null)
 
   if (!socketRef.current) {
-    socketRef.current = socket || io('http://localhost:5000', {
+    socketRef.current = socket || io('${API}', {
       autoConnect: true,
       withCredentials: true,
       auth: { token: useAuthStore.getState().token }
@@ -48,7 +50,7 @@ export function LiveStreamProvider({ children, socket }) {
       // when a viewer requests stream, send them an offer
       activeSocket.off('stream:viewer_wants_offer')
       activeSocket.on('stream:viewer_wants_offer', ({ viewerId }) => {
-        console.log('🎯 Host sending offer to viewer:', viewerId)
+        console.log(' Host sending offer to viewer:', viewerId)
         if (viewerId) sendOfferToPeer(viewerId, streamId, media)
       })
 
@@ -159,7 +161,7 @@ export function LiveStreamProvider({ children, socket }) {
     })
 
     peer.on('stream', (remoteStream) => {
-      console.log('✅ Got remote stream from host!')
+      console.log(' Got remote stream from host!')
       onStream(remoteStream)
     })
 

@@ -4,6 +4,8 @@ import { useAuthStore } from '../store/authStore'
 import { useNavigate } from 'react-router-dom'
 import { UserPlus, Heart, MessageCircle, CornerDownRight, Bell } from 'lucide-react'
 import Avatar from '../components/Avatar'
+import API from "../api"
+
 
 export default function Notifications() {
   const [notifications, setNotifications] = useState([])
@@ -19,7 +21,7 @@ export default function Notifications() {
 
   async function fetchNotifications() {
     try {
-      const res = await axios.get('http://localhost:5000/api/notifications', { headers })
+      const res = await axios.get('${API}/api/notifications', { headers })
       setNotifications(res.data)
     } catch (err) { console.log(err) }
     finally { setLoading(false) }
@@ -27,7 +29,7 @@ export default function Notifications() {
 
   async function markAllRead() {
     try {
-      await axios.patch('http://localhost:5000/api/notifications/read-all', {}, { headers })
+      await axios.patch('${API}/api/notifications/read-all', {}, { headers })
     } catch (err) { console.log(err) }
   }
 

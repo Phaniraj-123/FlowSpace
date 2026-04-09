@@ -7,14 +7,14 @@ export default function Posts({ token }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    axios.get('http://localhost:5000/api/admin/posts', { headers })
+    axios.get('${API}/api/admin/posts', { headers })
       .then(res => setPosts(res.data))
       .finally(() => setLoading(false))
   }, [])
 
   async function deletePost(id) {
     if (!confirm('Delete this post?')) return
-    await axios.delete(`http://localhost:5000/api/admin/posts/${id}`, { headers })
+    await axios.delete(`${API}/api/admin/posts/${id}`, { headers })
     setPosts(posts.filter(p => p._id !== id))
   }
 

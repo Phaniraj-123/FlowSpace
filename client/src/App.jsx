@@ -20,18 +20,19 @@ import Messages from './pages/Messages'
 import LiveStreams from './pages/LiveStreams'
 import LiveStreamRoom from './pages/LiveStreamRoom'
 import Monetization from './pages/Monetization'
-import CreatorSubscription from './pages/CreatorSubscription'
+import CreatorSubscription from './pages/creatorSubscription'
 import { LiveStreamProvider } from './context/LiveStreamContext'
 import Settings from './pages/Settings'
 import StreamAnalytics from './pages/StreamAnalytics'
 import PolicyGate from './components/PolicyGate'
 import PrivacyPolicy from './pages/PrivacyPolicy'
+import API from "../api"
 
 const savedTheme = localStorage.getItem('theme') || 'dark'
 document.documentElement.setAttribute('data-theme', savedTheme)
 
 // create socket ONCE outside components
-const socket = io('http://localhost:5000', {
+const socket = io('${API}', {
   autoConnect: false,
   withCredentials: true,
 })
@@ -51,7 +52,7 @@ function Layout() {
       socket.on('connect', () => console.log(' socket connected:', socket.id))
       socket.on('connect_error', (err) => console.log(' error:', err.message))
 
-      axios.get('http://localhost:5000/api/users/me', {
+      axios.get('${API}/api/users/me', {
         headers: { Authorization: `Bearer ${token}` }
       }).then(res => {
         updateUser({

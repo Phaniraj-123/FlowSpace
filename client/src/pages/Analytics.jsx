@@ -6,6 +6,7 @@ import {
   CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts'
 import { TrendingUp, Clock, Target, Zap, Flame, Award } from 'lucide-react'
+import API from "../api";
 
 export default function Analytics() {
   const { token } = useAuthStore()
@@ -20,9 +21,9 @@ export default function Analytics() {
   async function fetchData() {
     try {
       const [statsRes, sessionsRes, goalsRes] = await Promise.all([
-        axios.get('http://localhost:5000/api/users/me/stats', { headers }),
-        axios.get('http://localhost:5000/api/sessions/history', { headers }),
-        axios.get('http://localhost:5000/api/goals/me', { headers })
+        axios.get('${API}/api/users/me/stats', { headers }),
+        axios.get('${API}/api/sessions/history', { headers }),
+        axios.get('${API}/api/goals/me', { headers })
       ])
       setStats(statsRes.data)
       setSessions(sessionsRes.data)

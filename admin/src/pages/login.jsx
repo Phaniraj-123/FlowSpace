@@ -14,7 +14,7 @@ export default function Login({ onLogin }) {
         setError('')
         try {
             console.log('submitting...', email, password)
-            const res = await axios.post('http://localhost:5000/api/auth/login', { email, password })
+            const res = await axios.post('${API}/api/auth/login', { email, password })
             console.log('login response:', res.data)
             if (!res.data.user?.isAdmin) {
                 setError('You are not an admin!')

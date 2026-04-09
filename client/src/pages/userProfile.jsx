@@ -4,6 +4,8 @@ import axios from 'axios'
 import { useAuthStore } from '../store/authStore'
 import { ArrowLeft, UserPlus, UserCheck, Heart, MessageCircle, Target, MoreVertical, X } from 'lucide-react'
 import Avatar, { TierBadge } from '../components/Avatar'
+import API from "../api"
+
 
 export default function UserProfile() {
   const { username } = useParams()
@@ -38,15 +40,15 @@ export default function UserProfile() {
     try {
       setLoading(true)
       const [profileRes, postsRes] = await Promise.all([
-        axios.get(`http://localhost:5000/api/users/${username}`, { headers }),
-        axios.get(`http://localhost:5000/api/feed/user/${username}`, { headers })
+        axios.get(`${API}/api/users/${username}`, { headers }),
+        axios.get(`${API}/api/feed/user/${username}`, { headers })
       ])
       setProfile(profileRes.data)
       setPosts(postsRes.data)
       setIsFollowing(profileRes.data.followers?.some(f => f._id === me?.id))
 
       const goalsRes = await axios.get(
-        `http://localhost:5000/api/goals/user/${profileRes.data._id}`, { headers }
+        `${API}/api/goals/user/${profileRes.data._id}`, { headers }
       )
       setGoals(goalsRes.data)
     } catch (err) { console.log(err) }
@@ -56,9 +58,9 @@ export default function UserProfile() {
   async function toggleFollow() {
     try {
       if (isFollowing) {
-        await axios.delete(`http://localhost:5000/api/users/${profile._id}/follow`, { headers })
+        await axios.delete(`${API}/api/users/${profile._id}/follow`, { headers })
       } else {
-        await axios.post(`http://localhost:5000/api/users/${profile._id}/follow`, {}, { headers })
+        await axios.post(`${API}/api/users/${profile._id}/follow`, {}, { headers })
       }
       setIsFollowing(!isFollowing)
       fetchProfile()
@@ -68,7 +70,7 @@ export default function UserProfile() {
   async function blockUser() {
     if (!confirm(`Block @${profile.username}? They won't be able to see your posts.`)) return
     try {
-      await axios.post(`http://localhost:5000/api/settings/block/${profile._id}`, {}, { headers })
+      await axios.post(`${API}/api/settings/block/${profile._id}`, {}, { headers })
       setIsBlocked(true)
       setShowMoreMenu(false)
       alert(`🚫 @${profile.username} has been blocked`)
@@ -77,7 +79,7 @@ export default function UserProfile() {
 
   async function unblockUser() {
     try {
-      await axios.delete(`http://localhost:5000/api/settings/block/${profile._id}`, { headers })
+      await axios.delete(`${API}/api/settings/block/${profile._id}`, { headers })
       setIsBlocked(false)
       setShowMoreMenu(false)
     } catch (err) { console.log(err) }
@@ -87,7 +89,7 @@ export default function UserProfile() {
     setShowSubModal(false)
     try {
       const freshToken = useAuthStore.getState().token
-      const orderRes = await axios.post('http://localhost:5000/api/plans/create-order', {
+      const orderRes = await axios.post('${API}/api/plans/create-order', {
         creatorId: profile._id, months, price
       }, { headers: { Authorization: `Bearer ${freshToken}` } })
 
@@ -99,7 +101,7 @@ export default function UserProfile() {
         order_id: orderId,
         handler: async function (response) {
           const freshToken2 = useAuthStore.getState().token
-          await axios.post('http://localhost:5000/api/plans/verify', {
+          await axios.post('${API}/api/plans/verify', {
             razorpay_order_id: response.razorpay_order_id,
             razorpay_payment_id: response.razorpay_payment_id,
             razorpay_signature: response.razorpay_signature,

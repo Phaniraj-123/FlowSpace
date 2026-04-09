@@ -7,7 +7,7 @@ export default function Dashboard({ token }) {
   const [analytics, setAnalytics] = useState(null)
 
   useEffect(() => {
-    axios.get('http://localhost:5000/api/admin/analytics', { headers })
+    axios.get('${API}/api/admin/analytics', { headers })
       .then(res => setAnalytics(res.data))
       .catch(console.log)
   }, [])

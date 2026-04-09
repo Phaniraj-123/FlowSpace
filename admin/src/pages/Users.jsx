@@ -8,24 +8,24 @@ export default function Users({ token }) {
   const [search, setSearch] = useState('')
 
   useEffect(() => {
-    axios.get('http://localhost:5000/api/admin/users', { headers })
+    axios.get('${API}/api/admin/users', { headers })
       .then(res => setUsers(res.data))
       .finally(() => setLoading(false))
   }, [])
 
   async function banUser(id, isBanned) {
-    await axios.patch(`http://localhost:5000/api/admin/users/${id}/ban`, {}, { headers })
+    await axios.patch(`${API}/api/admin/users/${id}/ban`, {}, { headers })
     setUsers(users.map(u => u._id === id ? { ...u, isBanned: !isBanned } : u))
   }
 
   async function deleteUser(id) {
     if (!confirm('Delete this user and all their posts?')) return
-    await axios.delete(`http://localhost:5000/api/admin/users/${id}`, { headers })
+    await axios.delete(`${API}/api/admin/users/${id}`, { headers })
     setUsers(users.filter(u => u._id !== id))
   }
 
   async function setTier(id, tier) {
-    await axios.patch(`http://localhost:5000/api/admin/users/${id}/tier`, { tier }, { headers })
+    await axios.patch(`${API}/api/admin/users/${id}/tier`, { tier }, { headers })
     setUsers(users.map(u => u._id === id ? { ...u, subscriptionTier: tier || null } : u))
   }
 
