@@ -7,21 +7,22 @@ const bcrypt = require('bcryptjs')
 // REGISTER
 router.post('/register', async (req, res) => {
   try {
-    const { username, email, password } = req.body
-    const userExists = await User.findOne({ $or: [{ email }, { username }] })
-    if (userExists) return res.status(400).json({ error: 'User already exists' })
+    const { username, email, phone, password } = req.body
 
-    // Hash password manually
+    if (!phone) return res.status(400).json({ error: 'Phone number is required' })
+
+    const userExists = await User.findOne({ $or: [{ email }, { username }, { phone }] })
+    if (userExists) return res.status(400).json({ error: 'Email, username, or phone already in use' })
+
     const hashedPassword = await bcrypt.hash(password, 12)
+    const user = await User.create({ username, email, phone, password: hashedPassword })
 
-    const user = await User.create({ username, email, password: hashedPassword })
     const accessToken = signAccessToken(user._id)
     const refreshToken = signRefreshToken(user._id)
-
     await User.findByIdAndUpdate(user._id, { refreshToken })
 
     res.cookie('refreshToken', refreshToken, { httpOnly: true, maxAge: 7 * 24 * 60 * 60 * 1000 })
-    res.status(201).json({ accessToken, user: { id: user._id, username: user.username, email: user.email } })
+    res.status(201).json({ accessToken, user: { id: user._id, username: user.username, email: user.email, phone: user.phone } })
   } catch (err) {
     res.status(500).json({ error: err.message })
   }
@@ -29,32 +30,32 @@ router.post('/register', async (req, res) => {
 // LOGIN
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body
+    const { identifier, password } = req.body
 
-    const user = await User.findOne({ email })
+    // identifier can be email or phone
+    const user = await User.findOne({
+      $or: [{ email: identifier }, { phone: identifier }]
+    })
 
-    if (!user) return res.status(401).json({ error: 'Invalid email or password' })
+    if (!user) return res.status(401).json({ error: 'Invalid credentials' })
 
     const isMatch = await user.matchPassword(password)
-
-    if (!isMatch) return res.status(401).json({ error: 'Invalid email or password' })
+    if (!isMatch) return res.status(401).json({ error: 'Invalid credentials' })
 
     if (user.isBanned) return res.status(403).json({ error: 'Your account has been banned. Contact support.' })
 
-
     const accessToken = signAccessToken(user._id)
     const refreshToken = signRefreshToken(user._id)
-
     await User.findByIdAndUpdate(user._id, { refreshToken })
 
     res.cookie('refreshToken', refreshToken, { httpOnly: true, maxAge: 7 * 24 * 60 * 60 * 1000 })
-    console.log('sending response...')
     res.json({
       accessToken,
       user: {
         id: user._id,
         username: user.username,
         email: user.email,
+        phone: user.phone,
         name: user.name,
         avatar: user.avatar,
         bio: user.bio,
@@ -62,7 +63,6 @@ router.post('/login', async (req, res) => {
         isAdmin: user.isAdmin
       }
     })
-    console.log("response sent")
   } catch (err) {
     res.status(500).json({ error: err.message })
   }

@@ -50,18 +50,17 @@ export function TierBadge({ tier, size = 18 }) {
       style={{ flexShrink: 0, display: 'inline-block', verticalAlign: 'middle' }}
     >
       {/* Wavy star shape background */}
-      <path
-        d="M12 2L14.09 8.26L21 9.27L16 14.14L17.18 21.02L12 17.77L6.82 21.02L8 14.14L3 9.27L9.91 8.26L12 2Z"
-        fill={c}
-        stroke="white"
-        strokeWidth="1.2"
-        strokeLinejoin="round"
-      />
+      <path d="M12 2L14.09 8.26L21 9.27L16 14.14L17.18 21.02L12 17.77L6.82 21.02L8 14.14L3 
+      9.27L9.91 8.26L12 2Z" 
+      fill={c} 
+      stroke="white" 
+      strokeWidth="1.2" 
+      strokeLinejoin="round" />
       {/* Checkmark */}
       <path
         d="M8.5 12L11 14.5L15.5 9.5"
         stroke="white"
-        strokeWidth="1.8"
+        strokeWidth="2.0"
         strokeLinecap="round"
         strokeLinejoin="round"
       />

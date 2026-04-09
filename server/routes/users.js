@@ -7,6 +7,7 @@ const Session = require('../models/Session')
 const { createNotification } = require('../utils/notify')
 const upload = require('../middleware/upload')
 const { uploadToCloudinary } = require('../utils/cloudinary')
+const crypto = require('crypto')
 
 // ✅ SPECIFIC routes FIRST
 
@@ -164,6 +165,31 @@ router.post('/me/stream-key/regenerate', protect, async (req, res) => {
   }
 })
 
+
+// GET stream key
+router.get('/me/stream-key', protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select('streamKey')
+    if (!user.streamKey) {
+      user.streamKey = 'fs_' + crypto.randomBytes(20).toString('hex')
+      await user.save()
+    }
+    res.json({ streamKey: user.streamKey })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// Regenerate stream key
+router.post('/me/stream-key/regenerate', protect, async (req, res) => {
+  try {
+    const streamKey = 'fs_' + crypto.randomBytes(20).toString('hex')
+    await User.findByIdAndUpdate(req.user._id, { streamKey })
+    res.json({ streamKey })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
 
 
 // ✅ DYNAMIC route LAST

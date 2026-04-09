@@ -4,9 +4,9 @@ import { useAuthStore } from '../store/authStore'
 import { useNavigate } from 'react-router-dom'
 
 const TIER_INFO = {
-  yellow: { color: '#f59e0b', emoji: '🟡', name: 'Yellow', price: '₹399/month', priceINR: 500, split: '50/50', perks: ['Subscriber badge', 'Support creator', 'Basic perks'] },
-  green: { color: '#22c55e', emoji: '🟢', name: 'Green', price: '₹999/month', priceINR: 1500, split: '60/40', perks: ['Green badge', 'Exclusive content', 'Priority chat'] },
-  purple: { color: '#a855f7', emoji: '🟣', name: 'Purple', price: '₹1999/month', priceINR: 2500, split: '70/30', perks: ['Purple badge', 'All perks', 'Direct access', 'VIP support'] }
+  yellow: { color: '#f59e0b', emoji: '🟡', name: 'Yellow', price: '₹399/month', priceINR: 39900, split: '50/50', perks: ['Subscriber badge', 'Support creator', 'Basic perks'] },
+  green: { color: '#22c55e', emoji: '🟢', name: 'Green', price: '₹999/month', priceINR: 99900, split: '60/40', perks: ['Green badge', 'Exclusive content', 'Priority chat'] },
+  purple: { color: '#a855f7', emoji: '🟣', name: 'Purple', price: '₹1999/month', priceINR: 199900, split: '70/30', perks: ['Purple badge', 'All perks', 'Direct access', 'VIP support'] }
 }
 
 export default function CreatorSubscription() {
@@ -14,27 +14,25 @@ export default function CreatorSubscription() {
   const headers = { Authorization: `Bearer ${token}` }
   const navigate = useNavigate()
 
-  const [checking, setChecking] = useState(true)
-  const [currentTier, setCurrentTier] = useState(user?.subscriptionTier)
+  const [currentTier, setCurrentTier] = useState(user?.subscriptionTier || null)
   const [upgrading, setUpgrading] = useState(null)
-  const [confirmTier, setConfirmTier] = useState(null) // stores which tier user clicked
+  const [confirmTier, setConfirmTier] = useState(null)
+  const [autoAwarded, setAutoAwarded] = useState(false)
 
   useEffect(() => {
-    autoCheck()
+    checkAutoAward()
   }, [])
 
-  async function autoCheck() {
+  // Only used to auto-award yellow if eligible — does NOT block anything
+  async function checkAutoAward() {
     try {
       const res = await axios.post('http://localhost:5000/api/plans/check-tick', {}, { headers })
-      if (res.data.awarded) {
+      if (res.data.awarded && !currentTier) {
         setCurrentTier(res.data.tier)
         updateUser({ subscriptionTier: res.data.tier })
-      } else {
-        // not eligible yet
-        setCurrentTier(null)
+        if (!res.data.alreadyHad) setAutoAwarded(true)
       }
     } catch (err) { console.log(err) }
-    finally { setChecking(false) }
   }
 
   async function upgradeTier(tier) {
@@ -80,71 +78,112 @@ export default function CreatorSubscription() {
       alert(err.response?.data?.error || 'Payment failed')
     } finally { setUpgrading(null) }
   }
-  if (checking) return (
-    <div style={{ textAlign: 'center', padding: 80, color: 'var(--text2)' }}>
-      Checking eligibility...
-    </div>
-  )
-
-  if (!currentTier) return (
-    <div style={{ maxWidth: 500, margin: '80px auto', padding: '0 24px', textAlign: 'center' }}>
-      <p style={{ fontSize: 48, marginBottom: 16 }}>🔒</p>
-      <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800, marginBottom: 12 }}>
-        Not Eligible Yet
-      </h2>
-      <p style={{ color: 'var(--text2)', fontSize: 14, marginBottom: 24 }}>
-        You need at least 10 followers and 7 live streams to unlock creator subscriptions.
-      </p>
-      <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
-        <button onClick={() => navigate('/live')} style={{
-          padding: '10px 20px', background: 'var(--red)', color: '#fff',
-          border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer'
-        }}>Go Live</button>
-        <button onClick={() => navigate('/feed')} style={{
-          padding: '10px 20px', background: 'var(--bg2)', color: 'var(--text)',
-          border: '1px solid var(--border)', borderRadius: 10, fontSize: 14, cursor: 'pointer'
-        }}>Grow Followers</button>
-      </div>
-    </div>
-  )
 
   return (
-    <div style={{ maxWidth: 700, margin: '0 auto', padding: '32px 24px 100px' }}>
-      <h1 className="fade-up" style={{
-        fontFamily: 'var(--font-display)', fontSize: 26, fontWeight: 800, marginBottom: 8
-      }}>Creator Subscriptions</h1>
-      <p style={{ color: 'var(--text2)', fontSize: 14, marginBottom: 28 }}>
-        You're eligible! Choose your subscription tier.
-      </p>
+    <>
+      <style>{`
+        .creator-sub-root {
+          max-width: 700px;
+          margin: 0 auto;
+          padding: 28px 20px 100px;
+        }
+        .tier-card {
+          background: var(--bg2);
+          border-radius: 16px;
+          padding: 20px;
+          margin-bottom: 14px;
+          transition: border-color 0.15s;
+        }
+        .tier-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 12px;
+          gap: 12px;
+          flex-wrap: wrap;
+        }
+        .confirm-modal {
+          position: fixed; inset: 0;
+          background: #00000088;
+          z-index: 999;
+          display: flex; align-items: flex-end; justify-content: center;
+          padding: 0;
+        }
+        .confirm-sheet {
+          background: var(--bg);
+          border-radius: 24px 24px 0 0;
+          padding: 28px 24px 36px;
+          width: 100%; max-width: 480px;
+          animation: slideUp 0.25s ease;
+        }
+        @keyframes slideUp {
+          from { transform: translateY(100%); }
+          to { transform: translateY(0); }
+        }
+      `}</style>
 
-      {/* Current tier banner */}
-      <div style={{
-        background: `linear-gradient(135deg, ${TIER_INFO[currentTier].color}22, ${TIER_INFO[currentTier].color}11)`,
-        border: `1px solid ${TIER_INFO[currentTier].color}44`,
-        borderRadius: 20, padding: 20, marginBottom: 28,
-        display: 'flex', alignItems: 'center', gap: 14
-      }}>
-        <span style={{ fontSize: 36 }}>{TIER_INFO[currentTier].emoji}</span>
-        <div>
-          <p style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: TIER_INFO[currentTier].color }}>
-            {TIER_INFO[currentTier].name} Creator
-          </p>
-          <p style={{ fontSize: 13, color: 'var(--text2)' }}>
-            You earn {TIER_INFO[currentTier].split.split('/')[0]}% · Subscribers pay {TIER_INFO[currentTier].price}
-          </p>
-        </div>
-      </div>
+      <div className="creator-sub-root">
+        <h1 className="fade-up" style={{
+          fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 800, marginBottom: 6
+        }}>Creator Subscriptions</h1>
+        <p style={{ color: 'var(--text2)', fontSize: 14, marginBottom: 24 }}>
+          Activate a tier so fans can subscribe to you directly from your profile.
+        </p>
 
-      {/* All tiers */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-        {Object.entries(TIER_INFO).map(([tier, info]) => (
-          <div key={tier} style={{
-            background: 'var(--bg2)',
-            border: `2px solid ${currentTier === tier ? info.color : 'var(--border)'}`,
-            borderRadius: 16, padding: 20
+        {/* Auto-awarded banner */}
+        {autoAwarded && (
+          <div style={{
+            background: '#f59e0b22', border: '1px solid #f59e0b44',
+            borderRadius: 14, padding: '14px 18px', marginBottom: 20,
+            display: 'flex', alignItems: 'center', gap: 12
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 24 }}>🎉</span>
+            <div>
+              <p style={{ fontWeight: 700, fontSize: 14, color: '#f59e0b' }}>Yellow tier auto-awarded!</p>
+              <p style={{ fontSize: 12, color: 'var(--text2)' }}>You met the eligibility criteria. Fans can now subscribe to you.</p>
+            </div>
+          </div>
+        )}
+
+        {/* Current tier banner */}
+        {currentTier && (
+          <div style={{
+            background: `linear-gradient(135deg, ${TIER_INFO[currentTier].color}22, ${TIER_INFO[currentTier].color}11)`,
+            border: `1px solid ${TIER_INFO[currentTier].color}44`,
+            borderRadius: 16, padding: '16px 20px', marginBottom: 24,
+            display: 'flex', alignItems: 'center', gap: 14
+          }}>
+            <span style={{ fontSize: 32 }}>{TIER_INFO[currentTier].emoji}</span>
+            <div>
+              <p style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 800, color: TIER_INFO[currentTier].color }}>
+                {TIER_INFO[currentTier].name} Creator — Active
+              </p>
+              <p style={{ fontSize: 13, color: 'var(--text2)' }}>
+                You earn {TIER_INFO[currentTier].split.split('/')[0]}% · Fans pay {TIER_INFO[currentTier].price}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* No tier yet — friendly message, NOT a blocker */}
+        {!currentTier && (
+          <div style={{
+            background: 'var(--bg2)', border: '1px solid var(--border)',
+            borderRadius: 14, padding: '16px 20px', marginBottom: 24
+          }}>
+            <p style={{ fontSize: 14, color: 'var(--text2)', lineHeight: 1.6 }}>
+              💡 Choose a tier below to activate creator subscriptions. Once active, fans can subscribe to you from your profile and you'll start earning.
+            </p>
+          </div>
+        )}
+
+        {/* Tier cards */}
+        {Object.entries(TIER_INFO).map(([tier, info]) => (
+          <div key={tier} className="tier-card" style={{
+            border: `2px solid ${currentTier === tier ? info.color : 'var(--border)'}`
+          }}>
+            <div className="tier-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <span style={{ fontSize: 28 }}>{info.emoji}</span>
                 <div>
                   <p style={{ fontWeight: 800, fontSize: 16, color: info.color }}>{info.name}</p>
@@ -156,16 +195,22 @@ export default function CreatorSubscription() {
               {currentTier === tier ? (
                 <span style={{
                   padding: '6px 14px', background: info.color + '22',
-                  color: info.color, borderRadius: 10, fontSize: 12, fontWeight: 700
+                  color: info.color, borderRadius: 10, fontSize: 12, fontWeight: 700,
+                  flexShrink: 0
                 }}>✓ Active</span>
               ) : (
-                <button onClick={() => setConfirmTier(tier)} disabled={upgrading === tier} style={{
-                  padding: '8px 18px', background: info.color,
-                  color: '#fff', border: 'none', borderRadius: 10,
-                  fontSize: 13, fontWeight: 700, cursor: 'pointer',
-                  opacity: upgrading === tier ? 0.7 : 1
-                }}>
-                  {upgrading === tier ? 'Saving...' :
+                <button
+                  onClick={() => setConfirmTier(tier)}
+                  disabled={upgrading === tier}
+                  style={{
+                    padding: '8px 18px', background: info.color,
+                    color: '#fff', border: 'none', borderRadius: 10,
+                    fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                    opacity: upgrading === tier ? 0.7 : 1, flexShrink: 0
+                  }}
+                >
+                  {upgrading === tier ? 'Processing...' :
+                    !currentTier ? 'Activate' :
                     Object.keys(TIER_INFO).indexOf(tier) > Object.keys(TIER_INFO).indexOf(currentTier)
                       ? 'Upgrade' : 'Downgrade'}
                 </button>
@@ -181,65 +226,58 @@ export default function CreatorSubscription() {
             </div>
           </div>
         ))}
+
+        {/* Info box */}
+        <div style={{
+          background: 'var(--bg2)', border: '1px solid var(--border)',
+          borderRadius: 14, padding: 16, marginTop: 8
+        }}>
+          <p style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.7 }}>
+            💡 <strong style={{ color: 'var(--text)' }}>How it works:</strong> Activate a tier once (one-time fee).
+            Then when fans subscribe to you on your profile, they pay monthly and you receive your revenue split directly to your wallet.
+            Minimum payout is ₹100.
+          </p>
+        </div>
       </div>
 
-      {/* Razorpay subscription note */}
-      <div style={{
-        marginTop: 24, background: 'var(--bg2)', border: '1px solid var(--border)',
-        borderRadius: 14, padding: 16
-      }}>
-        <p style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.6 }}>
-          💡 <strong style={{ color: 'var(--text)' }}>How it works:</strong> When fans subscribe to you via your profile,
-          they pay via Razorpay. You receive your split directly to your wallet.
-          Minimum payout is ₹100.
-        </p>
-      </div>
+      {/* Confirm bottom sheet */}
       {confirmTier && (
-        <div style={{
-          position: 'fixed', inset: 0, background: '#00000088',
-          zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24
-        }} onClick={() => setConfirmTier(null)}>
-          <div onClick={e => e.stopPropagation()} style={{
-            background: 'var(--bg)', border: `1px solid ${TIER_INFO[confirmTier].color}44`,
-            borderRadius: 24, padding: 32, width: '100%', maxWidth: 420
-          }}>
-            <span style={{ fontSize: 48 }}>{TIER_INFO[confirmTier].emoji}</span>
+        <div className="confirm-modal" onClick={() => setConfirmTier(null)}>
+          <div className="confirm-sheet" onClick={e => e.stopPropagation()}>
+            {/* Handle */}
+            <div style={{ width: 40, height: 4, borderRadius: 2, background: 'var(--border2)', margin: '0 auto 20px' }} />
+
+            <span style={{ fontSize: 40 }}>{TIER_INFO[confirmTier].emoji}</span>
             <h2 style={{
-              fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800,
-              color: TIER_INFO[confirmTier].color, marginTop: 12, marginBottom: 8
+              fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 800,
+              color: TIER_INFO[confirmTier].color, marginTop: 10, marginBottom: 6
             }}>
               {TIER_INFO[confirmTier].name} Creator Plan
             </h2>
-            <p style={{ fontSize: 14, color: 'var(--text2)', marginBottom: 20, lineHeight: 1.6 }}>
-              Subscribe to the {TIER_INFO[confirmTier].name} plan and start receiving payments from your fans.
+            <p style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 20, lineHeight: 1.6 }}>
+              Pay once to activate this tier. Fans can then subscribe to you monthly.
             </p>
 
-            {/* Plan details */}
-            <div style={{
-              background: 'var(--bg2)', borderRadius: 14, padding: 16, marginBottom: 20
-            }}>
+            <div style={{ background: 'var(--bg2)', borderRadius: 14, padding: 16, marginBottom: 20 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
-                <span style={{ fontSize: 13, color: 'var(--text2)' }}>Subscribers pay you</span>
+                <span style={{ fontSize: 13, color: 'var(--text2)' }}>One-time activation fee</span>
                 <span style={{ fontSize: 13, fontWeight: 700 }}>{TIER_INFO[confirmTier].price}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
-                <span style={{ fontSize: 13, color: 'var(--text2)' }}>Your revenue split</span>
+                <span style={{ fontSize: 13, color: 'var(--text2)' }}>Your revenue share</span>
                 <span style={{ fontSize: 13, fontWeight: 700, color: TIER_INFO[confirmTier].color }}>
                   {TIER_INFO[confirmTier].split.split('/')[0]}%
                 </span>
               </div>
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: 10 }}>
                 {TIER_INFO[confirmTier].perks.map(p => (
-                  <p key={p} style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 4 }}>
-                    ✓ {p}
-                  </p>
+                  <p key={p} style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 4 }}>✓ {p}</p>
                 ))}
               </div>
             </div>
 
-            <p style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 20, textAlign: 'center' }}>
-              You'll be charged {TIER_INFO[confirmTier].price} to activate this tier.
-              Once paid, fans can subscribe to you!
+            <p style={{ fontSize: 11, color: 'var(--text2)', marginBottom: 16, textAlign: 'center' }}>
+              Payments secured by Razorpay · No refunds per our policy
             </p>
 
             <div style={{ display: 'flex', gap: 10 }}>
@@ -248,22 +286,18 @@ export default function CreatorSubscription() {
                 color: 'var(--text2)', border: '1px solid var(--border)',
                 borderRadius: 10, cursor: 'pointer', fontSize: 14
               }}>Cancel</button>
-              <button onClick={() => {
-                setConfirmTier(null)
-                upgradeTier(confirmTier)
-              }} style={{
+              <button onClick={() => { setConfirmTier(null); upgradeTier(confirmTier) }} style={{
                 flex: 2, padding: '12px',
                 background: TIER_INFO[confirmTier].color,
                 color: '#fff', border: 'none', borderRadius: 10,
                 cursor: 'pointer', fontSize: 14, fontWeight: 700
               }}>
-                ✓ Activate {TIER_INFO[confirmTier].name} Tier
+                Activate {TIER_INFO[confirmTier].name} Tier
               </button>
             </div>
           </div>
         </div>
       )}
-    </div>
-
+    </>
   )
 }

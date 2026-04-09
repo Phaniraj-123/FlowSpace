@@ -1,10 +1,11 @@
+// Force Node to use the latest TLS versions
+require('dotenv').config({ path: require('path').join(__dirname, '.env') })
 const express = require('express')
 const mongoose = require('mongoose')
 const cors = require('cors')
 const cookieParser = require('cookie-parser')
 const http = require('http')
 const { Server } = require('socket.io')
-require('dotenv').config()
 
 
 const app = express()
@@ -35,6 +36,8 @@ const monetizationRoutes = require('./routes/monetization')
 const subscriptionPlansRoutes = require('./routes/subscriptionPlans')
 const settingsRoutes = require('./routes/settings')
 const adminRoutes = require('./routes/admin')
+const handleStreamSockets = require('./socket/streamSocket')
+
 
 
 app.get('/', (req, res) => res.json({ message: '⚡ FlowSpace API is running!' }))
@@ -53,6 +56,7 @@ app.use('/api/plans', subscriptionPlansRoutes)
 app.use('/api/settings', settingsRoutes)
 app.use('/api/admin', adminRoutes)
 
+handleStreamSockets(io)
 
 
 // Socket.io
@@ -60,6 +64,7 @@ const jwt = require('jsonwebtoken')
 const User = require('./models/User')
 const Session = require('./models/Session')
 const NodeMediaServer = require('node-media-server')
+const LiveStream = require('./models/LiveStream')
 
 
 const nmsConfig = {
@@ -97,10 +102,10 @@ nms.on('prePublish', async (id, StreamPath, args) => {
     const parts = (StreamPath || '').split('/')
     const streamKey = parts[parts.length - 1]
     console.log('Stream key:', streamKey)
-    
+
     const user = await User.findOne({ streamKey })
     console.log('User found:', user?.username)
-    
+
     if (!user) {
       console.log('No user — rejecting')
       const session = nms.getSession(id)
@@ -137,24 +142,26 @@ nms.on('donePublish', async (id, StreamPath, args) => {
 // online users map: userId -> socketId
 const onlineUsers = new Map()
 
-io.use((socket, next) => {
+io.use(async (socket, next) => {
   try {
-    const token = socket.handshake.auth.token
+    const token = socket.handshake.auth?.token
     if (!token) return next(new Error('No token'))
     const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET)
-    socket.userId = decoded.id
+    const user = await User.findById(decoded.id).select('username avatar _id')
+    if (!user) return next(new Error('User not found'))
+    socket.user = user                      // full user object
+    // string ID
     next()
   } catch (err) {
     next(new Error('Invalid token'))
   }
 })
-
 io.on('connection', async (socket) => {
-  console.log('⚡ User connected:', socket.userId)
+  console.log(' User connected:', socket.user?._id)
 
   // store online user
-  onlineUsers.set(socket.userId, socket.id)
-  await User.findByIdAndUpdate(socket.userId, { isOnline: true })
+  onlineUsers.set(socket.user?._id, socket.id)
+  await User.findByIdAndUpdate(socket.user?._id, { isOnline: true })
 
   // JOIN focus room
   socket.on('join:room', async ({ sessionId }) => {
@@ -166,7 +173,7 @@ io.on('connection', async (socket) => {
       participants: session.participants,
       count: session.participants.length
     })
-    console.log(`👥 ${socket.userId} joined room ${sessionId}`)
+    console.log(`👥 ${socket.user?._id} joined room ${sessionId}`)
   })
   socket.on('dm:delete', ({ conversationId, messageId }) => {
     io.to(`dm:${conversationId}`).emit('dm:deleted', { messageId })
@@ -197,21 +204,34 @@ io.on('connection', async (socket) => {
   })
 
   // CHAT message
-  socket.on('chat:message', async ({ sessionId, text }) => {
-    const user = await User.findById(socket.userId).select('username avatar')
-    io.to(sessionId).emit('chat:new', {
-      user: { username: user.username, avatar: user.avatar },
-      text,
-      timestamp: new Date()
-    })
-  })
+  // socket.on('stream:chat', async ({ streamId, text }) => {
+  //   console.log('💬 stream:chat received from', socket.user?.username, 'text:', text, 'streamId:', streamId)
+  //   console.log('socket.user:', socket.user)
+  //   if (!text?.trim()) return
+  //   const user = socket.user  // ← use socket.user not socket.user?._id
+  //   if (!user) return
+  //   const message = {
+  //     user: user._id,
+  //     username: user.username,
+  //     avatar: user.avatar,
+  //     text,
+  //     type: 'message',
+  //     createdAt: new Date(),
+  //     _id: Date.now().toString()
+  //   }
+  //   // emit first for speed
+  //   io.to(`stream:${streamId}`).emit('stream:message', message)
+  //   // save to DB
+  //   const LiveStream = require('./models/LiveStream')
+  //   await LiveStream.findByIdAndUpdate(streamId, { $push: { messages: message } })
+  // })
 
   // DISCONNECT
   socket.on('disconnect', async () => {
     try {
       const LiveStream = require('./models/LiveStream')
       const activeStream = await LiveStream.findOne({
-        host: socket.userId,
+        host: socket.user?._id,
         isLive: true
       })
       if (activeStream) {
@@ -223,6 +243,29 @@ io.on('connection', async (socket) => {
         })
       }
     } catch (err) { console.log(err) }
+  })
+  socket.on('stream:end', async ({ streamId }) => {
+    const stream = await LiveStream.findById(streamId)
+    if (!stream) return
+    if (stream.host.toString() !== socket.userId) return
+
+    const duration = stream.createdAt
+      ? Math.floor((new Date() - new Date(stream.createdAt)) / 1000)
+      : 0
+
+    const avgViewers = stream.uniqueViewers?.length
+      ? Math.floor(stream.uniqueViewers.length / 2)
+      : 0
+
+    stream.isLive = false
+    stream.endedAt = new Date()
+    stream.duration = duration
+    stream.avgViewers = avgViewers
+    await stream.save()
+
+    io.to(`stream:${streamId}`).emit('stream:ended', {
+      message: 'Host has ended the stream'
+    })
   })
   // DM events
   socket.on('dm:join', (conversationId) => {
@@ -241,7 +284,7 @@ io.on('connection', async (socket) => {
 
       const message = await Message.create({
         conversation: conversationId,
-        sender: socket.userId,
+        sender: socket.user?._id,
         text,
         replyTo: replyTo || null
       })
@@ -261,97 +304,140 @@ io.on('connection', async (socket) => {
 
   // LIVE STREAM - WebRTC signaling
   socket.on('stream:join', async ({ streamId }) => {
+    const rooms = Array.from(socket.rooms)
+    if (rooms.includes(`stream:${streamId}`)) return
+
     socket.join(`stream:${streamId}`)
     const LiveStream = require('./models/LiveStream')
     const stream = await LiveStream.findById(streamId)
+    if (!stream) return
 
-    // don't count host as viewer
-    const isHost = stream?.host?.toString() === socket.userId?.toString()
+    const isHost = stream?.host?.toString() === socket.userId
+
     if (!isHost) {
-      await LiveStream.findByIdAndUpdate(streamId, {
-        $addToSet: { viewers: socket.userId },
+      const updated = await LiveStream.findByIdAndUpdate(streamId, {
+        $addToSet: { viewers: socket.userId, uniqueViewers: socket.userId },
         $inc: { viewerCount: 1 }
+      }, { new: true })
+
+      // update peak viewers
+      if (updated && updated.viewerCount > (updated.peakViewers || 0)) {
+        await LiveStream.findByIdAndUpdate(streamId, {
+          peakViewers: updated.viewerCount
+        })
+      }
+
+      io.to(`stream:${streamId}`).emit('stream:viewer_joined', {
+        userId: socket.userId,
+        username: socket.user.username,
+        avatar: socket.user.avatar,
+        viewerCount: updated.viewerCount
       })
     }
+  
 
-    const user = await User.findById(socket.userId).select('username avatar')
-    io.to(`stream:${streamId}`).emit('stream:viewer_joined', {
-      userId: socket.userId,
-      username: user.username,
-      avatar: user.avatar,
-      viewerCount: await LiveStream.findById(streamId).then(s => s?.viewerCount || 0)
-    })
+
+  io.to(`stream:${streamId}`).emit('stream:viewer_joined', {
+    userId: socket.userId,
+    username: socket.user.username,
+    avatar: socket.user.avatar,
+    viewerCount: await LiveStream.findById(streamId).then(s => s?.viewerCount || 0)
   })
 
-  socket.on('stream:leave', async ({ streamId }) => {
-    socket.leave(`stream:${streamId}`)
-    const LiveStream = require('./models/LiveStream')
-    await LiveStream.findByIdAndUpdate(streamId, {
-      $pull: { viewers: socket.userId },
-    })
-    const stream = await LiveStream.findById(streamId)
-    const newCount = Math.max(0, stream?.viewerCount - 1 || 0)
-    await LiveStream.findByIdAndUpdate(streamId, { viewerCount: newCount })
-    io.to(`stream:${streamId}`).emit('stream:viewer_left', {
-      userId: socket.userId,
-      viewerCount: newCount
-    })
-  })
-
-  socket.on('stream:chat', async ({ streamId, text }) => {
-    const user = await User.findById(socket.userId).select('username avatar')
-    const message = {
-      user: socket.userId,
-      username: user.username,
-      avatar: user.avatar,
-      text,
-      type: 'message',
-      createdAt: new Date()
-    }
-    // emit FIRST for speed
-    io.to(`stream:${streamId}`).emit('stream:message', message)
-    // then save to DB
-    const LiveStream = require('./models/LiveStream')
-    await LiveStream.findByIdAndUpdate(streamId, { $push: { messages: message } })
-  })
-
-  socket.on('stream:like', async ({ streamId }) => {
-    const LiveStream = require('./models/LiveStream')
-    const stream = await LiveStream.findById(streamId)
-    const isLiked = stream.likes.includes(socket.userId)
-    if (isLiked) {
-      await LiveStream.findByIdAndUpdate(streamId, { $pull: { likes: socket.userId } })
-    } else {
-      await LiveStream.findByIdAndUpdate(streamId, { $addToSet: { likes: socket.userId } })
-    }
-    io.to(`stream:${streamId}`).emit('stream:likes', {
-      count: stream.likes.length + (isLiked ? -1 : 1),
-      isLiked: !isLiked,
-      userId: socket.userId
-    })
-  })
-
-  socket.on('stream:donation', ({ streamId, donation }) => {
-    io.to(`stream:${streamId}`).emit('stream:donation_received', donation)
-  })
-
-  // WebRTC signaling
-  socket.on('webrtc:offer', ({ streamId, offer, viewerId }) => {
-    socket.to(`stream:${streamId}`).emit('webrtc:offer', { offer, viewerId })
-  })
-
-  socket.on('webrtc:answer', ({ streamId, answer, hostId }) => {
-    socket.to(`stream:${streamId}`).emit('webrtc:answer', { answer })
-  })
-
-  socket.on('webrtc:ice', ({ streamId, candidate, targetId }) => {
-    socket.to(`stream:${streamId}`).emit('webrtc:ice', { candidate })
-  })
-
-  socket.on('stream:host_ready', ({ streamId }) => {
+  // host announces they are ready
+  socket.on('stream:host_join', ({ streamId }) => {
+    socket.join(`stream:${streamId}`)
     socket.to(`stream:${streamId}`).emit('stream:host_ready')
+    console.log('✅ Host joined stream room:', streamId)
+  })
+
+  // viewer requests offer from host
+  socket.on('stream:request_offer', ({ streamId }) => {
+    console.log('👀 Viewer requesting offer for stream:', streamId)
+    // tell host to send an offer to this specific viewer
+    const viewerId = socket.userId || socket.id
+    socket.to(`stream:${streamId}`).emit('stream:viewer_wants_offer', {
+      viewerId
+    })
+  })
+
+})
+
+socket.on('stream:leave', async ({ streamId }) => {
+  socket.leave(`stream:${streamId}`)
+  const LiveStream = require('./models/LiveStream')
+  await LiveStream.findByIdAndUpdate(streamId, {
+    $pull: { viewers: socket.user?._id },
+  })
+  const stream = await LiveStream.findById(streamId)
+  const newCount = Math.max(0, stream?.viewerCount - 1 || 0)
+  await LiveStream.findByIdAndUpdate(streamId, { viewerCount: newCount })
+  io.to(`stream:${streamId}`).emit('stream:viewer_left', {
+    userId: socket.user?._id,
+    viewerCount: newCount
   })
 })
+
+socket.on('stream:chat', async ({ streamId, text }) => {
+  const user = await User.findById(socket.user?._id).select('username avatar')
+  const message = {
+    user: socket.user?._id,
+    username: user.username,
+    avatar: user.avatar,
+    text,
+    type: 'message',
+    createdAt: new Date()
+  }
+  // emit FIRST for speed
+  io.to(`stream:${streamId}`).emit('stream:message', message)
+  // then save to DB
+  const LiveStream = require('./models/LiveStream')
+  await LiveStream.findByIdAndUpdate(streamId, { $push: { messages: message } })
+
+  await LiveStream.findByIdAndUpdate(streamId, {
+    $inc: { chatCount: 1 },
+    $push: { messages: message }
+  })
+})
+
+socket.on('stream:like', async ({ streamId }) => {
+  const LiveStream = require('./models/LiveStream')
+  const stream = await LiveStream.findById(streamId)
+  const isLiked = stream.likes.includes(socket.user?._id)
+  if (isLiked) {
+    await LiveStream.findByIdAndUpdate(streamId, { $pull: { likes: socket.user?._id } })
+  } else {
+    await LiveStream.findByIdAndUpdate(streamId, { $addToSet: { likes: socket.user?._id } })
+  }
+  io.to(`stream:${streamId}`).emit('stream:likes', {
+    count: stream.likes.length + (isLiked ? -1 : 1),
+    isLiked: !isLiked,
+    userId: socket.user?._id
+  })
+})
+
+socket.on('stream:donation', ({ streamId, donation }) => {
+  io.to(`stream:${streamId}`).emit('stream:donation_received', donation)
+})
+
+// WebRTC signaling
+socket.on('webrtc:offer', ({ streamId, offer, viewerId }) => {
+  socket.to(`stream:${streamId}`).emit('webrtc:offer', { offer, viewerId })
+})
+
+socket.on('webrtc:answer', ({ streamId, answer, hostId }) => {
+  console.log('📨 Answer received, routing to stream room:', streamId)
+  socket.to(`stream:${streamId}`).emit('webrtc:answer', { answer, viewerId: socket.userId || socket.id })
+})
+
+socket.on('webrtc:ice', ({ streamId, candidate, targetId }) => {
+  socket.to(`stream:${streamId}`).emit('webrtc:ice', { candidate })
+})
+
+socket.on('stream:host_ready', ({ streamId }) => {
+  socket.to(`stream:${streamId}`).emit('stream:host_ready')
+})
+  })
 
 // Connect MongoDB
 mongoose.connect(process.env.MONGODB_URI, {
@@ -363,6 +449,8 @@ mongoose.connect(process.env.MONGODB_URI, {
 
 const PORT = process.env.PORT || 5000
 httpServer.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`))
+
+
 
 // DM events
 

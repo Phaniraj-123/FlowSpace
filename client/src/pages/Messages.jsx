@@ -203,7 +203,7 @@ export default function Messages() {
     if (!val.trim()) return setSearchResults([])
     try {
       const res = await axios.get(`http://localhost:5000/api/users/search/${val}`, { headers })
-      setSearchResults(res.data)
+      setSearchResults(res.data.users)
     } catch (err) { console.log(err) }
   }
 
@@ -266,7 +266,7 @@ export default function Messages() {
                   onMouseEnter={e => e.currentTarget.style.background = 'var(--bg3)'}
                   onMouseLeave={e => e.currentTarget.style.background = 'none'}
                 >
-                  <Avatar src={user?.avatar} name={user?.username} size={38} />
+                  <Avatar src={u?.avatar} name={u?.username} size={38} />  {/* u not user */}
                   <span style={{ fontSize: 13, fontWeight: 600 }}>{u.username}</span>
                 </div>
               ))}

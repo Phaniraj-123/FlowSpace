@@ -5,21 +5,98 @@ const Wallet = require('../models/Wallet')
 const Subscription = require('../models/Subscription')
 const User = require('../models/User')
 const Post = require('../models/post')
+const Razorpay = require('razorpay')
+const crypto = require('crypto')
+
+function getRazorpay() {
+  return new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID,
+    key_secret: process.env.RAZORPAY_KEY_SECRET
+  })
+}
 
 // coin packages
 const COIN_PACKAGES = [
-  { id: 'starter', name: 'Starter', coins: 100, price: '$0.99', bonus: 0 },
-  { id: 'basic', name: 'Basic', coins: 500, price: '$3.99', bonus: 50 },
-  { id: 'popular', name: 'Popular', coins: 1200, price: '$7.99', bonus: 200 },
-  { id: 'pro', name: 'Pro', coins: 3000, price: '$17.99', bonus: 500 },
-  { id: 'elite', name: 'Elite', coins: 7000, price: '$39.99', bonus: 1500 },
+  { id: 'starter', name: 'Starter', coins: 100, price: 99, displayPrice: '₹9.99', bonus: 0 },
+  { id: 'basic', name: 'Basic', coins: 500, price: 3299, displayPrice: '₹39.99', bonus: 50 },
+  { id: 'popular', name: 'Popular', coins: 1200, price: 6499, displayPrice: '₹64.99', bonus: 200 },
+  { id: 'pro', name: 'Pro', coins: 3000, price: 14999, displayPrice: '₹149.99', bonus: 500 },
+  { id: 'elite', name: 'Elite', coins: 7000, price: 32999, displayPrice: '₹329.99', bonus: 1500 },
 ]
+
+// CREATE Razorpay order
+router.post('/create-order', protect, async (req, res) => {
+  try {
+    const { packageId } = req.body
+    console.log('📦 packageId received:', packageId)
+    console.log('🔑 KEY_ID:', process.env.RAZORPAY_KEY_ID)
+    console.log('🔑 KEY_SECRET exists:', !!process.env.RAZORPAY_KEY_SECRET)
+    const pkg = COIN_PACKAGES.find(p => p.id === packageId)
+    console.log('📦 pkg found:', pkg)
+    if (!pkg) return res.status(400).json({ error: 'Invalid package' })
+
+    const order = await getRazorpay().orders.create({
+      amount: pkg.price, // in paise
+      currency: 'INR',
+      receipt: `fs_${Date.now()}`,
+      notes: {
+        userId: req.user._id.toString(),
+        packageId,
+        coins: String(pkg.coins + pkg.bonus)
+      }
+    })
+
+    res.json({ order, pkg, key: process.env.RAZORPAY_KEY_ID })
+  } catch (err) {
+    console.error('❌ Razorpay error:', err)
+    res.status(500).json({ error: err.message })
+  }
+})
 
 const SUB_TIERS = {
   basic: { price: 50, label: 'Basic', color: '#6366f1', perks: ['Subscriber badge', 'Support creator'] },
   pro: { price: 150, label: 'Pro', color: '#f59e0b', perks: ['Pro badge', 'Exclusive posts', 'Priority in chat'] },
   vip: { price: 300, label: 'VIP', color: '#ef4444', perks: ['VIP badge', 'All Pro perks', 'Direct message access'] },
 }
+
+
+// VERIFY payment after Razorpay checkout
+router.post('/verify-payment', protect, async (req, res) => {
+  try {
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, packageId } = req.body
+
+    // verify signature
+    const body = razorpay_order_id + '|' + razorpay_payment_id
+    const expectedSignature = crypto
+      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+      .update(body)
+      .digest('hex')
+
+    if (expectedSignature !== razorpay_signature)
+      return res.status(400).json({ error: 'Invalid payment signature' })
+
+    // add coins to wallet
+    const pkg = COIN_PACKAGES.find(p => p.id === packageId)
+    const totalCoins = pkg.coins + pkg.bonus
+
+    let wallet = await Wallet.findOne({ user: req.user._id })
+    if (!wallet) wallet = await Wallet.create({ user: req.user._id })
+
+    wallet.balance += totalCoins
+    wallet.totalEarned += totalCoins
+    wallet.transactions.push({
+      type: 'credit',
+      amount: totalCoins,
+      description: `Purchased ${pkg.name} package (${totalCoins} coins) via Razorpay`,
+      razorpayPaymentId: razorpay_payment_id
+    })
+    await wallet.save()
+
+    res.json({ success: true, newBalance: wallet.balance, coinsAdded: totalCoins })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
 
 // GET wallet
 router.get('/wallet', protect, async (req, res) => {
@@ -241,6 +318,29 @@ router.post('/withdraw', protect, async (req, res) => {
     await wallet.save()
 
     res.json({ success: true, newBalance: wallet.balance })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+router.get('/earnings', protect, async (req, res) => {
+  try {
+    const wallet = await Wallet.findOne({ user: req.user._id })
+    if (!wallet) return res.json({ donations: 0, subscriptions: 0, boosts: 0 })
+
+    const donations = wallet.transactions
+      .filter(t => t.type === 'credit' && t.description?.includes('Donation'))
+      .reduce((sum, t) => sum + t.amount, 0)
+
+    const subscriptions = wallet.transactions
+      .filter(t => t.type === 'credit' && t.description?.includes('Subscription'))
+      .reduce((sum, t) => sum + t.amount, 0)
+
+    const ppv = wallet.transactions
+      .filter(t => t.type === 'credit' && t.description?.includes('PPV'))
+      .reduce((sum, t) => sum + t.amount, 0)
+
+    res.json({ donations, subscriptions, ppv, total: donations + subscriptions + ppv })
   } catch (err) {
     res.status(500).json({ error: err.message })
   }

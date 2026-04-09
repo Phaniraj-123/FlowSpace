@@ -126,7 +126,7 @@ router.delete('/:id', protect, async (req, res) => {
       .sort({ createdAt: -1 })
 
     await Conversation.findByIdAndUpdate(convId, {
-      lastMessageText: lastMessage ? lastMessage.text || '📷 Media' : '',
+      lastMessageText: lastMessage ? lastMessage.text || ' Media' : '',
       lastMessage: lastMessage?._id || null
     })
 

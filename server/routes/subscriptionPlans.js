@@ -6,12 +6,14 @@ const { protect } = require('../middleware/auth')
 const User = require('../models/User')
 const Wallet = require('../models/Wallet')
 const LiveStream = require('../models/LiveStream')
+const Subscription = require('../models/Subscription')
 
-
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET
-})
+function getRazorpay() {
+  return new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID,
+    key_secret: process.env.RAZORPAY_KEY_SECRET
+  })
+}
 
 const PLANS = {
   yellow: { name: 'Yellow', price: 399, currency: 'INR', split: 50, color: '#f59e0b', emoji: '🟡', requirements: { followers: 10, streams: 7 } },
@@ -54,18 +56,22 @@ router.get('/plans', (req, res) => {
 router.post('/create-order', protect, async (req, res) => {
   try {
     const { creatorId, months, price } = req.body
+    console.log('📦 create-order called:', { creatorId, months, price })
+    console.log('👤 subscriber:', req.user._id)
     if (!creatorId || !months || !price)
       return res.status(400).json({ error: 'Missing fields' })
 
     const creator = await User.findById(creatorId)
+    console.log('🎨 creator:', creator?.username, 'tier:', creator?.subscriptionTier)
+    console.log('💰 creating order for amount:', price * 100, 'paise')
     if (!creator) return res.status(404).json({ error: 'Creator not found' })
     if (!creator.subscriptionTier)
       return res.status(400).json({ error: 'Creator is not accepting subscriptions' })
 
-    const order = await razorpay.orders.create({
+    const order = await getRazorpay().orders.create({
       amount: price * 100,
       currency: 'INR',
-      receipt: `sub_${req.user._id}_${creatorId}_${Date.now()}`,
+      receipt: `sub_${Date.now()}`,
       notes: {
         subscriberId: req.user._id.toString(),
         creatorId: creatorId.toString(),
@@ -73,6 +79,7 @@ router.post('/create-order', protect, async (req, res) => {
         price: price.toString()
       }
     })
+    console.log('✅ order created:', order.id)
 
     res.json({
       orderId: order.id,
@@ -159,10 +166,10 @@ router.post('/activate-tier', protect, async (req, res) => {
     const TIER_PRICES = { yellow: 39900, green: 99900, purple: 199900 } // paise
     if (!TIER_PRICES[tier]) return res.status(400).json({ error: 'Invalid tier' })
 
-    const order = await razorpay.orders.create({
+    const order = await getRazorpay().orders.create({
       amount: TIER_PRICES[tier],
       currency: 'INR',
-      receipt: `tier_${req.user._id}_${Date.now()}`,
+      receipt: `tier_$${Date.now()}`,
       notes: { userId: req.user._id.toString(), tier }
     })
 
@@ -173,8 +180,8 @@ router.post('/activate-tier', protect, async (req, res) => {
       keyId: process.env.RAZORPAY_KEY_ID
     })
   } catch (err) {
-    console.log('activate-tier error:', err.message)
-    res.status(500).json({ error: err.message })
+    console.log('activate-tier error FULL:', JSON.stringify(err))
+    res.status(500).json({ error: err.error?.description || err.message || JSON.stringify(err) })
   }
 })
 

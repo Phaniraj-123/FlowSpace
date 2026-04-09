@@ -3,7 +3,7 @@ import { useAuthStore } from '../store/authStore'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import Avatar, { TierBadge } from '../components/Avatar'
-import { Target, CheckCircle2, Timer, Clock, Flame, LogOut, ChevronRight, Camera, Edit2, X, Check, Crown, Settings as SettingsIcon } from 'lucide-react'
+import { Target, CheckCircle2, Timer, Clock, Flame, LogOut, ChevronRight, Camera, Edit2, X, Check, Crown, Settings as SettingsIcon, TrendingUp } from 'lucide-react'
 
 export default function Profile() {
   const { user, token, updateUser } = useAuthStore()
@@ -31,7 +31,7 @@ export default function Profile() {
   async function fetchStats() {
     try {
       const res = await axios.get('http://localhost:5000/api/users/me/stats', { headers })
-      console.log("stats:", res.data)
+      // console.log("stats:", res.data)
       setStats(res.data)
     } catch (err) { console.log(err) }
     finally { setLoading(false) }
@@ -322,6 +322,7 @@ export default function Profile() {
           { icon: <Target size={16} />, label: 'My Goals', path: '/goals' },
           { icon: <Timer size={16} />, label: 'My Sessions', path: '/sessions' },
           { icon: <Clock size={16} />, label: 'Analytics', path: '/analytics' },
+          { icon: <TrendingUp size={16} />, label: 'Stream Analytics', path: '/analytics/streams' },
           { icon: <Crown size={16} />, label: 'Creator Subscriptions', path: '/creator-subscription' },
           { icon: <SettingsIcon size={16} />, label: 'Settings', path: '/settings' },
         ].map(item => (

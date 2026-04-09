@@ -2,7 +2,7 @@ import { useAuthStore } from '../store/authStore'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useState, useEffect, useRef } from 'react'
 import axios from 'axios'
-import { Home, Search, Bell, User, LogOut, Zap, TrendingUp, Trophy, MessageCircle, Radio, Coins, Menu, X, Target, Timer, Crown, Settings, ChevronLeft } from 'lucide-react'
+import { Home, Search, Bell, User, LogOut, Zap, TrendingUp, Trophy, MessageCircle, Radio, Coins, Menu, X, Target, Timer, Crown, Settings, ChevronLeft, Plus } from 'lucide-react'
 import { useLiveStream } from '../context/LiveStreamContext'
 import Avatar from './Avatar'
 
@@ -24,24 +24,15 @@ export default function Navbar() {
       checkActiveStream()
     }
     const interval = setInterval(() => {
-      if (user) {
-        fetchUnread()
-        fetchUnreadDMs()
-        checkActiveStream()
-      }
+      if (user) { fetchUnread(); fetchUnreadDMs(); checkActiveStream() }
     }, 30000)
     window.addEventListener('dm:read', fetchUnreadDMs)
-    return () => {
-      clearInterval(interval)
-      window.removeEventListener('dm:read', fetchUnreadDMs)
-    }
+    return () => { clearInterval(interval); window.removeEventListener('dm:read', fetchUnreadDMs) }
   }, [user])
 
   useEffect(() => {
     function handleClickOutside(e) {
-      if (menuRef.current && !menuRef.current.contains(e.target)) {
-        setMenuOpen(false)
-      }
+      if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false)
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
@@ -76,39 +67,40 @@ export default function Navbar() {
         headers: { Authorization: `Bearer ${token}` }
       })
       const myStream = res.data.find(s =>
-        s.host?._id === currentUser._id ||
-        s.host?._id === currentUser.id ||
-        s.host === currentUser._id ||
-        s.host === currentUser.id
+        s.host?._id === currentUser._id || s.host?._id === currentUser.id ||
+        s.host === currentUser._id || s.host === currentUser.id
       )
       setActiveStream(myStream || null)
     } catch (err) { }
   }
 
-  function go(path) {
-    navigate(path)
-    setMenuOpen(false)
-  }
+  function go(path) { navigate(path); setMenuOpen(false) }
 
-  function handleLogout() {
-    logout()
-    navigate('/login')
-    setMenuOpen(false)
-  }
+  function handleLogout() { logout(); navigate('/login'); setMenuOpen(false) }
 
   const isActive = (path) => location.pathname === path
 
-  // Bottom nav items
+  function handlePlusPress() {
+    if (location.pathname === '/feed') {
+      // trigger feed's modal directly
+      if (window.__openCreatePost) window.__openCreatePost()
+    } else {
+      navigate('/feed')
+      // slight delay to let feed mount before opening modal
+      setTimeout(() => { if (window.__openCreatePost) window.__openCreatePost() }, 300)
+    }
+  }
+
   const bottomNav = [
     { icon: <Radio size={22} />, path: '/live', label: 'Live' },
     { icon: <Search size={22} />, path: '/search', label: 'Search' },
-    { icon: <Home size={22} />, path: '/feed', label: 'Feed' },
+    { icon: null, path: null, label: 'Create', isCreate: true }, // center + button
     { icon: <Coins size={22} />, path: '/monetization', label: 'Coins' },
     { icon: <User size={22} />, path: '/profile', label: 'Profile' },
   ]
 
-  // Dropdown menu items
   const menuItems = [
+    { icon: <Home size={16} />, label: 'Feed', path: '/feed' },
     { icon: <Target size={16} />, label: 'Goals', path: '/goals' },
     { icon: <Timer size={16} />, label: 'Sessions', path: '/sessions' },
     { icon: <TrendingUp size={16} />, label: 'Analytics', path: '/analytics' },
@@ -119,20 +111,43 @@ export default function Navbar() {
 
   return (
     <>
-      {/* TOP BAR — logo + hamburger */}
+      <style>{`
+        .nav-icon-btn {
+          position: relative; background: none; border: none;
+          cursor: pointer; padding: 6px;
+          display: flex; align-items: center; transition: color 0.15s;
+        }
+        .bottom-nav-btn {
+          flex: 1; display: flex; flex-direction: column;
+          align-items: center; justify-content: center; gap: 3px;
+          background: none; border: none; cursor: pointer;
+          padding: 6px 0; position: relative; transition: color 0.15s;
+        }
+        .create-btn {
+          width: 48px; height: 48px; border-radius: 16px;
+          background: var(--indigo);
+          display: flex; align-items: center; justify-content: center;
+          border: none; cursor: pointer;
+          box-shadow: 0 4px 16px var(--indigo)66;
+          transition: transform 0.15s, box-shadow 0.15s;
+          margin-bottom: 8px;
+        }
+        .create-btn:active { transform: scale(0.92); }
+      `}</style>
+
+      {/* TOP BAR */}
       <nav style={{
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
         background: 'var(--bg)', borderBottom: '1px solid var(--border)',
         height: 58, display: 'flex', alignItems: 'center',
         justifyContent: 'space-between', padding: '0 16px'
       }}>
-        {/* Logo + back button */}
+        {/* Logo + back */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {!['/live', '/feed', '/search', '/monetization', '/profile'].includes(location.pathname) && (
             <button onClick={() => navigate(-1)} style={{
               background: 'none', border: 'none', cursor: 'pointer',
-              color: 'var(--text2)', display: 'flex', alignItems: 'center',
-              padding: '6px'
+              color: 'var(--text2)', display: 'flex', alignItems: 'center', padding: '6px'
             }}>
               <ChevronLeft size={22} />
             </button>
@@ -147,16 +162,11 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* Right side — avatar + hamburger */}
-        {/* Right side — notifs + dms + avatar + hamburger */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }} ref={menuRef}>
-
+        {/* Right side */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }} ref={menuRef}>
           {/* Notifications */}
-          <button onClick={() => go('/notifications')} style={{
-            position: 'relative', background: 'none', border: 'none',
-            cursor: 'pointer', color: isActive('/notifications') ? 'var(--indigo)' : 'var(--text2)',
-            padding: '6px', display: 'flex', alignItems: 'center'
-          }}>
+          <button className="nav-icon-btn" onClick={() => go('/notifications')}
+            style={{ color: isActive('/notifications') ? 'var(--indigo)' : 'var(--text2)' }}>
             <Bell size={20} />
             {unread > 0 && (
               <span style={{
@@ -169,11 +179,8 @@ export default function Navbar() {
           </button>
 
           {/* Messages */}
-          <button onClick={() => go('/messages')} style={{
-            position: 'relative', background: 'none', border: 'none',
-            cursor: 'pointer', color: isActive('/messages') ? 'var(--indigo)' : 'var(--text2)',
-            padding: '6px', display: 'flex', alignItems: 'center'
-          }}>
+          <button className="nav-icon-btn" onClick={() => go('/messages')}
+            style={{ color: isActive('/messages') ? 'var(--indigo)' : 'var(--text2)' }}>
             <MessageCircle size={20} />
             {unreadDMs > 0 && (
               <span style={{
@@ -185,13 +192,7 @@ export default function Navbar() {
             )}
           </button>
 
-          <Avatar
-            src={user?.avatar}
-            name={user?.username}
-            size={32}
-            tier={user?.subscriptionTier}
-            onClick={() => go('/profile')}
-          />
+          {/* Hamburger */}
           <button onClick={() => setMenuOpen(prev => !prev)} style={{
             background: menuOpen ? 'var(--bg2)' : 'none',
             border: '1px solid var(--border)',
@@ -207,8 +208,7 @@ export default function Navbar() {
               position: 'absolute', top: 58, right: 0,
               background: 'var(--bg)', border: '1px solid var(--border)',
               borderRadius: '0 0 16px 16px', minWidth: 220,
-              boxShadow: '0 8px 32px #0006', zIndex: 200,
-              overflow: 'hidden'
+              boxShadow: '0 8px 32px #0006', zIndex: 200, overflow: 'hidden'
             }}>
               {/* User info */}
               <div style={{
@@ -222,7 +222,6 @@ export default function Navbar() {
                 </div>
               </div>
 
-              {/* Menu items */}
               {menuItems.map(item => (
                 <button key={item.path} onClick={() => go(item.path)} style={{
                   width: '100%', padding: '12px 16px',
@@ -236,25 +235,16 @@ export default function Navbar() {
                   onMouseEnter={e => e.currentTarget.style.background = 'var(--bg2)'}
                   onMouseLeave={e => e.currentTarget.style.background = isActive(item.path) ? 'var(--bg2)' : 'none'}
                 >
-                  {item.icon}
-                  {item.label}
-                  {item.badge > 0 && (
-                    <span style={{
-                      marginLeft: 'auto', background: 'var(--red)', color: '#fff',
-                      borderRadius: 20, padding: '1px 7px', fontSize: 11, fontWeight: 700
-                    }}>{item.badge}</span>
-                  )}
+                  {item.icon}{item.label}
                 </button>
               ))}
 
-              {/* Logout */}
               <button onClick={handleLogout} style={{
                 width: '100%', padding: '12px 16px',
                 background: 'none', color: '#ef4444',
                 border: 'none', borderTop: '1px solid var(--border)',
                 cursor: 'pointer', fontSize: 14,
-                display: 'flex', alignItems: 'center', gap: 10,
-                textAlign: 'left'
+                display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left'
               }}
                 onMouseEnter={e => e.currentTarget.style.background = '#ef444411'}
                 onMouseLeave={e => e.currentTarget.style.background = 'none'}
@@ -270,37 +260,42 @@ export default function Navbar() {
       <nav style={{
         position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100,
         background: 'var(--bg)', borderTop: '1px solid var(--border)',
-        height: 60, display: 'flex', alignItems: 'center',
+        height: 64, display: 'flex', alignItems: 'center',
         justifyContent: 'space-around', padding: '0 8px'
       }}>
-        {bottomNav.map(item => (
-          <button key={item.path} onClick={() => go(item.path)} style={{
-            flex: 1, display: 'flex', flexDirection: 'column',
-            alignItems: 'center', justifyContent: 'center', gap: 3,
-            background: 'none', border: 'none', cursor: 'pointer',
-            color: isActive(item.path) ? 'var(--indigo)' : 'var(--text2)',
-            padding: '6px 0', position: 'relative', transition: 'color 0.15s'
-          }}>
-            {item.icon}
-            <span style={{ fontSize: 10, fontWeight: isActive(item.path) ? 700 : 400 }}>
-              {item.label}
-            </span>
-            {isActive(item.path) && (
-              <div style={{
-                position: 'absolute', top: 0, left: '50%',
-                transform: 'translateX(-50%)',
-                width: 24, height: 3, borderRadius: 3,
-                background: 'var(--indigo)'
-              }} />
-            )}
-          </button>
-        ))}
+        {bottomNav.map((item, idx) => {
+          if (item.isCreate) {
+            return (
+              <div key="create" style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+                <button className="create-btn" onClick={handlePlusPress}>
+                  <Plus size={22} color="#fff" strokeWidth={2.5} />
+                </button>
+              </div>
+            )
+          }
+          return (
+            <button key={item.path} className="bottom-nav-btn" onClick={() => go(item.path)}
+              style={{ color: isActive(item.path) ? 'var(--indigo)' : 'var(--text2)' }}>
+              {item.icon}
+              <span style={{ fontSize: 10, fontWeight: isActive(item.path) ? 700 : 400 }}>
+                {item.label}
+              </span>
+              {isActive(item.path) && (
+                <div style={{
+                  position: 'absolute', top: 0, left: '50%',
+                  transform: 'translateX(-50%)',
+                  width: 24, height: 3, borderRadius: 3, background: 'var(--indigo)'
+                }} />
+              )}
+            </button>
+          )
+        })}
       </nav>
 
       {/* Live bubble */}
       {activeStreamId && isHosting && (
         <div onClick={() => navigate(`/live/${activeStreamId}?host=true`)} style={{
-          position: 'fixed', bottom: 72, right: 16,
+          position: 'fixed', bottom: 76, right: 16,
           background: 'var(--red)', color: '#fff',
           padding: '10px 16px', borderRadius: 30,
           display: 'flex', alignItems: 'center', gap: 8,
@@ -316,7 +311,6 @@ export default function Navbar() {
         </div>
       )}
 
-      {/* Spacer for top bar */}
       <div style={{ height: 58 }} />
     </>
   )

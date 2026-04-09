@@ -25,6 +25,8 @@ export default function Monetization() {
   const [withdrawMethod, setWithdrawMethod] = useState('UPI')
   const [withdrawDetails, setWithdrawDetails] = useState('')
   const [withdrawing, setWithdrawing] = useState(false)
+  const [earnings, setEarnings] = useState(null)
+
 
   useEffect(() => {
     fetchAll()
@@ -32,16 +34,18 @@ export default function Monetization() {
 
   async function fetchAll() {
     try {
-      const [walletRes, pkgRes, subsRes, subersRes] = await Promise.all([
+      const [walletRes, pkgRes, subsRes, subersRes, earningsRes] = await Promise.all([
         axios.get('http://localhost:5000/api/monetization/wallet', { headers }),
         axios.get('http://localhost:5000/api/monetization/packages', { headers }),
         axios.get('http://localhost:5000/api/monetization/my-subscriptions', { headers }),
         axios.get('http://localhost:5000/api/monetization/my-subscribers', { headers }),
+        axios.get('http://localhost:5000/api/monetization/earnings', { headers })
       ])
       setWallet(walletRes.data)
       setPackages(pkgRes.data)
       setSubscriptions(subsRes.data)
       setSubscribers(subersRes.data)
+      setEarnings(earningsRes.data)
     } catch (err) { console.log(err) }
     finally { setLoading(false) }
   }
@@ -49,13 +53,58 @@ export default function Monetization() {
   async function buyCoins(pkg) {
     setBuying(pkg.id)
     try {
-      const res = await axios.post('http://localhost:5000/api/monetization/buy-coins',
-        { packageId: pkg.id }, { headers })
-      setWallet(prev => ({ ...prev, balance: res.data.newBalance }))
-      alert(`✅ Added ${res.data.coinsAdded} coins to your wallet!`)
+      // 1. create order on server
+      const res = await axios.post(
+        'http://localhost:5000/api/monetization/create-order',
+        { packageId: pkg.id }, { headers }
+      )
+      const { order, key } = res.data
+
+      // 2. open Razorpay checkout
+      const options = {
+        key,
+        amount: order.amount,
+        currency: 'INR',
+        name: 'Flowspace',
+        description: `${pkg.name} - ${pkg.coins + pkg.bonus} coins`,
+        order_id: order.id,
+        handler: async function (response) {
+          // 3. verify payment on server
+          try {
+            const verifyRes = await axios.post(
+              'http://localhost:5000/api/monetization/verify-payment',
+              {
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                packageId: pkg.id
+              },
+              { headers }
+            )
+            setWallet(prev => ({ ...prev, balance: verifyRes.data.newBalance }))
+            alert(`✅ Payment successful! ${verifyRes.data.coinsAdded} coins added!`)
+          } catch (err) {
+            alert('Payment verification failed. Contact support.')
+          }
+        },
+        prefill: {
+          name: user?.username,
+          email: user?.email || ''
+        },
+        theme: { color: '#6366f1' },
+        modal: {
+          ondismiss: () => console.log('Payment cancelled')
+        }
+      }
+
+      const razorpayInstance = new window.Razorpay(options)
+      razorpayInstance.open()
+
     } catch (err) {
-      alert(err.response?.data?.error || 'Purchase failed')
-    } finally { setBuying(null) }
+      alert(err.response?.data?.error || 'Failed to initiate payment')
+    } finally {
+      setBuying(null)
+    }
   }
 
   async function cancelSub(creatorId) {
@@ -79,7 +128,7 @@ export default function Monetization() {
     } finally { setWithdrawing(false) }
   }
 
-  const tabs = ['wallet', 'buy coins', 'subscriptions', 'subscribers', 'withdraw']
+  const tabs = ['wallet', 'buy coins', 'subscriptions', 'subscribers', 'earnings', 'withdraw']
 
   return (
     <div style={{ maxWidth: 800, margin: '0 auto', padding: '32px 24px 100px' }}>
@@ -210,14 +259,14 @@ export default function Monetization() {
                     + {pkg.bonus} bonus coins!
                   </p>
                 )}
-                <p style={{ fontSize: 22, fontWeight: 700, marginBottom: 16 }}>{pkg.price}</p>
+                <p style={{ fontSize: 22, fontWeight: 700, marginBottom: 16 }}>{pkg.displayPrice}</p>
                 <button onClick={() => buyCoins(pkg)} disabled={buying === pkg.id} style={{
                   width: '100%', padding: '10px', background: 'var(--indigo)',
                   color: '#fff', border: 'none', borderRadius: 10,
                   fontSize: 14, fontWeight: 700, cursor: 'pointer',
                   opacity: buying === pkg.id ? 0.7 : 1
                 }}>
-                  {buying === pkg.id ? 'Processing...' : `Buy for ${pkg.price}`}
+                  {buying === pkg.id ? 'Processing...' : `Buy for ${pkg.displayPrice}`}
                 </button>
               </div>
             ))}
@@ -326,6 +375,90 @@ export default function Monetization() {
         </div>
       )}
 
+     
+      {!loading && tab === 'earnings' && (
+        <div>
+          <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 700, marginBottom: 20 }}>
+            Creator Earnings
+          </h3>
+
+          {/* Stats grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 14, marginBottom: 28 }}>
+            {[
+              { label: 'Total earned', value: wallet?.totalEarned || 0, color: 'var(--green)' },
+              { label: 'From donations', value: earnings?.donations || 0, color: '#f59e0b' },
+              { label: 'From subscriptions', value: earnings?.subscriptions || 0, color: '#a855f7' },
+              { label: 'From PPV', value: earnings?.ppv || 0, color: '#3b82f6' },
+              { label: 'Total spent', value: wallet?.totalSpent || 0, color: '#ef4444' },
+              { label: 'Available', value: wallet?.balance || 0, color: 'var(--text)' },
+            ].map((stat, i) => (
+              <div key={i} style={{
+                background: 'var(--bg2)', border: '1px solid var(--border)',
+                borderRadius: 14, padding: 16, textAlign: 'center'
+              }}>
+                <p style={{ fontSize: 24, fontWeight: 900, color: stat.color }}>
+                  🪙 {stat.value.toLocaleString()}
+                </p>
+                <p style={{ fontSize: 12, color: 'var(--text2)', marginTop: 4 }}>{stat.label}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Subscriber breakdown */}
+          <h4 style={{ fontWeight: 700, fontSize: 14, marginBottom: 12 }}>Subscriber breakdown</h4>
+          <div style={{ display: 'flex', gap: 12, marginBottom: 28 }}>
+            {['basic', 'pro', 'vip'].map(tier => {
+              const count = subscribers.filter(s => s.tier === tier).length
+              return (
+                <div key={tier} style={{
+                  flex: 1, background: 'var(--bg2)', border: '1px solid var(--border)',
+                  borderRadius: 12, padding: 16, textAlign: 'center'
+                }}>
+                  <p style={{ fontSize: 28 }}>{TIER_ICONS[tier]}</p>
+                  <p style={{ fontWeight: 800, fontSize: 24, color: TIER_COLORS[tier] }}>{count}</p>
+                  <p style={{ fontSize: 12, color: 'var(--text2)', textTransform: 'capitalize' }}>{tier}</p>
+                  <p style={{ fontSize: 11, color: 'var(--text2)' }}>
+                    {count * { basic: 50, pro: 150, vip: 300 }[tier]} coins/mo
+                  </p>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Recent earnings */}
+          <h4 style={{ fontWeight: 700, fontSize: 14, marginBottom: 12 }}>Recent earnings</h4>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {wallet?.transactions
+              ?.filter(t => t.type === 'credit')
+              .slice().reverse().slice(0, 15)
+              .map((t, i) => (
+                <div key={i} style={{
+                  background: 'var(--bg2)', border: '1px solid var(--border)',
+                  borderRadius: 10, padding: '10px 14px',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                }}>
+                  <div>
+                    <p style={{ fontSize: 13 }}>{t.description}</p>
+                    <p style={{ fontSize: 11, color: 'var(--text2)' }}>
+                      {new Date(t.createdAt).toLocaleDateString('en-IN', {
+                        day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+                      })}
+                    </p>
+                  </div>
+                  <p style={{ fontWeight: 700, color: 'var(--green)', fontSize: 14 }}>
+                    +{t.amount} 🪙
+                  </p>
+                </div>
+              ))}
+            {!wallet?.transactions?.filter(t => t.type === 'credit').length && (
+              <p style={{ color: 'var(--text2)', textAlign: 'center', padding: 40 }}>
+                No earnings yet — start streaming!
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* WITHDRAW TAB */}
       {!loading && tab === 'withdraw' && (
         <div>
@@ -333,7 +466,7 @@ export default function Monetization() {
             Cash Out Coins
           </h3>
           <p style={{ color: 'var(--text2)', fontSize: 13, marginBottom: 20 }}>
-            Convert your coins to real money. Minimum 100 coins. Rate: 100 coins = $0.10
+            Convert your coins to real money. Minimum 100 coins. Rate: 100 coins = ₹10
           </p>
 
           <div style={{
@@ -355,7 +488,7 @@ export default function Monetization() {
                 }}
               />
               <p style={{ fontSize: 12, color: 'var(--text2)', marginTop: 6 }}>
-                ≈ ${(withdrawAmount * 0.001).toFixed(2)} USD · Available: {wallet?.balance || 0} coins
+                ≈ ₹{(withdrawAmount * 0.099).toFixed(2)} INR · Available: {wallet?.balance || 0} coins
               </p>
             </div>
 
@@ -397,7 +530,7 @@ export default function Monetization() {
               fontSize: 15, fontWeight: 700, cursor: 'pointer',
               opacity: withdrawing || withdrawAmount < 100 ? 0.6 : 1
             }}>
-              {withdrawing ? 'Processing...' : `Withdraw ${withdrawAmount} coins ≈ $${(withdrawAmount * 0.001).toFixed(2)}`}
+              {withdrawing ? 'Processing...' : `Withdraw ${withdrawAmount} coins ≈ ₹${(withdrawAmount * 0.099).toFixed(2)}`}
             </button>
 
             {/* Previous withdrawal requests */}

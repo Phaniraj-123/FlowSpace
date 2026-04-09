@@ -1,7 +1,8 @@
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import axios from 'axios'
 import { BrowserRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom'
-import Register from './pages/Register'
+import { io } from 'socket.io-client'
+import Register from './pages/register'
 import Login from './pages/Login'
 import Goals from './pages/Goals'
 import Sessions from './pages/Sessions'
@@ -22,14 +23,21 @@ import Monetization from './pages/Monetization'
 import CreatorSubscription from './pages/CreatorSubscription'
 import { LiveStreamProvider } from './context/LiveStreamContext'
 import Settings from './pages/Settings'
+import StreamAnalytics from './pages/StreamAnalytics'
+import PolicyGate from './components/PolicyGate'
+import PrivacyPolicy from './pages/PrivacyPolicy'
 
-// apply saved theme on load
 const savedTheme = localStorage.getItem('theme') || 'dark'
 document.documentElement.setAttribute('data-theme', savedTheme)
 
-
+// create socket ONCE outside components
+const socket = io('http://localhost:5000', {
+  autoConnect: false,
+  withCredentials: true,
+})
+// add this after socket is created
+window._socket = socket
 function Layout() {
-
   const location = useLocation()
   const hideNavbar = ['/login', '/register', '/'].includes(location.pathname)
   const { token, user, updateUser, logout } = useAuthStore()
@@ -37,6 +45,12 @@ function Layout() {
 
   useEffect(() => {
     if (token && user) {
+      console.log('🔑 token being sent:', token)
+      socket.auth = { token }
+      socket.connect()
+      socket.on('connect', () => console.log(' socket connected:', socket.id))
+      socket.on('connect_error', (err) => console.log(' error:', err.message))
+
       axios.get('http://localhost:5000/api/users/me', {
         headers: { Authorization: `Bearer ${token}` }
       }).then(res => {
@@ -49,18 +63,29 @@ function Layout() {
           name: res.data.name
         })
       }).catch(err => {
-        // if 401 — token expired, log out
         if (err.response?.status === 401) {
           logout()
           navigate('/login')
         }
       })
-    }else if (!token && !user) {
-    navigate('/login')
+    } else if (!token && !user) {
+      socket.disconnect()
+      navigate('/login')
     }
   }, [token])
+
+  const [policyAccepted, setPolicyAccepted] = useState(
+    () => localStorage.getItem('flowspace-policy-accepted') === 'true'
+  )
+
+  const handlePolicyAccept = () => {
+    localStorage.setItem('flowspace-policy-accepted', 'true')
+    setPolicyAccepted(true)
+  }
+
   return (
     <>
+    {!policyAccepted && <PolicyGate onAccept={handlePolicyAccept} />}
       {user && !hideNavbar && <Navbar />}
       <Routes>
         <Route path="/" element={<Login />} />
@@ -83,6 +108,8 @@ function Layout() {
         <Route path="/monetization" element={<Monetization />} />
         <Route path="/creator-subscription" element={<CreatorSubscription />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/analytics/streams" element={<StreamAnalytics />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
       </Routes>
     </>
   )
@@ -91,7 +118,7 @@ function Layout() {
 function App() {
   return (
     <BrowserRouter>
-      <LiveStreamProvider>
+      <LiveStreamProvider socket={socket}>
         <Layout />
       </LiveStreamProvider>
     </BrowserRouter>

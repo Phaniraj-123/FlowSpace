@@ -4,7 +4,7 @@ import { useAuthStore } from '../store/authStore'
 import { useNavigate } from 'react-router-dom'
 
 export default function Login() {
-  const [form, setForm] = useState({ email: '', password: '' })
+  const [form, setForm] = useState({ identifier: '', password: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const login = useAuthStore((state) => state.login)
@@ -69,11 +69,11 @@ export default function Login() {
 
           <form onSubmit={handleSubmit}>
             <div style={{ marginBottom: 16 }}>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--text2)', marginBottom: 8 }}>Email</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--text2)', marginBottom: 8 }}>Email or Phone</label>
               <input
-                type="email" value={form.email}
-                onChange={e => setForm({ ...form, email: e.target.value })}
-                placeholder="you@example.com"
+                type="text" value={form.identifier}
+                onChange={e => setForm({ ...form, identifier: e.target.value })}
+                placeholder="you@example.com or 9876566555"
                 style={{
                   width: '100%', padding: '11px 14px',
                   background: 'var(--bg3)', border: '1px solid var(--border2)',
