@@ -92,10 +92,13 @@ const nmsConfig = {
     ]
   }
 }
-const nms = new NodeMediaServer(nmsConfig)
-nms.run()
+if (process.env.NODE_ENV !== 'production') {
+  const nms = new NodeMediaServer(nmsConfig)
+  nms.run()
+}
 
 // verify stream key on publish
+if (process.env.NODE_ENV !== 'production') {
 nms.on('prePublish', async (id, StreamPath, args) => {
   try {
     // StreamPath format: /live/STREAMKEY
@@ -124,7 +127,7 @@ nms.on('prePublish', async (id, StreamPath, args) => {
       },
       { upsert: true, new: true }
     )
-    console.log('✅ Stream created for', user.username)
+    console.log(' Stream created for', user.username)
   } catch (err) {
     console.log('prePublish error:', err.message)
   }
@@ -138,7 +141,7 @@ nms.on('donePublish', async (id, StreamPath, args) => {
   )
   console.log('Stream ended:', streamKey)
 })
-
+}
 // online users map: userId -> socketId
 const onlineUsers = new Map()
 
