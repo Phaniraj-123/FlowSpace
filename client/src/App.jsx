@@ -26,7 +26,7 @@ import Settings from './pages/Settings'
 import StreamAnalytics from './pages/StreamAnalytics'
 import PolicyGate from './components/PolicyGate'
 import PrivacyPolicy from './pages/PrivacyPolicy'
-import API from "../api"
+import API from "../src/api"
 
 const savedTheme = localStorage.getItem('theme') || 'dark'
 document.documentElement.setAttribute('data-theme', savedTheme)
