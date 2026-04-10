@@ -1,6 +1,11 @@
 if (process.env.NODE_ENV !== 'production') {
   require('dotenv').config({ path: require('path').join(__dirname, '.env') })
 }
+console.log('ENV CHECK:', {
+  mongo: process.env.MONGODB_URI?.slice(0, 20),
+  jwt: process.env.JWT_ACCESS_SECRET?.slice(0, 5),
+  razorpay: process.env.RAZORPAY_KEY_ID?.slice(0, 10)
+})
 const express = require('express')
 const mongoose = require('mongoose')
 const cors = require('cors')
