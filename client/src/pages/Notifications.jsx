@@ -21,7 +21,7 @@ export default function Notifications() {
 
   async function fetchNotifications() {
     try {
-      const res = await axios.get('${API}/api/notifications', { headers })
+      const res = await axios.get('https://flowspace-3ief.onrender.com/api/notifications', { headers })
       setNotifications(res.data)
     } catch (err) { console.log(err) }
     finally { setLoading(false) }
@@ -29,7 +29,7 @@ export default function Notifications() {
 
   async function markAllRead() {
     try {
-      await axios.patch('${API}/api/notifications/read-all', {}, { headers })
+      await axios.patch('https://flowspace-3ief.onrender.com/api/notifications/read-all', {}, { headers })
     } catch (err) { console.log(err) }
   }
 

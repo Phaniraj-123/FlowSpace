@@ -8,7 +8,7 @@ export default function Users({ token }) {
   const [search, setSearch] = useState('')
 
   useEffect(() => {
-    axios.get('${API}/api/admin/users', { headers })
+    axios.get('https://flowspace-3ief.onrender.com/api/admin/users', { headers })
       .then(res => setUsers(res.data))
       .finally(() => setLoading(false))
   }, [])

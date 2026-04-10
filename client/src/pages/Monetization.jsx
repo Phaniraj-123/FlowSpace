@@ -37,11 +37,11 @@ export default function Monetization() {
   async function fetchAll() {
     try {
       const [walletRes, pkgRes, subsRes, subersRes, earningsRes] = await Promise.all([
-        axios.get('${API}/api/monetization/wallet', { headers }),
-        axios.get('${API}/api/monetization/packages', { headers }),
-        axios.get('${API}/api/monetization/my-subscriptions', { headers }),
-        axios.get('${API}/api/monetization/my-subscribers', { headers }),
-        axios.get('${API}/api/monetization/earnings', { headers })
+        axios.get('https://flowspace-3ief.onrender.com/api/monetization/wallet', { headers }),
+        axios.get('https://flowspace-3ief.onrender.com/api/monetization/packages', { headers }),
+        axios.get('https://flowspace-3ief.onrender.com/api/monetization/my-subscriptions', { headers }),
+        axios.get('https://flowspace-3ief.onrender.com/api/monetization/my-subscribers', { headers }),
+        axios.get('https://flowspace-3ief.onrender.com/api/monetization/earnings', { headers })
       ])
       setWallet(walletRes.data)
       setPackages(pkgRes.data)
@@ -57,7 +57,7 @@ export default function Monetization() {
     try {
       // 1. create order on server
       const res = await axios.post(
-        '${API}/api/monetization/create-order',
+        'https://flowspace-3ief.onrender.com/api/monetization/create-order',
         { packageId: pkg.id }, { headers }
       )
       const { order, key } = res.data
@@ -74,7 +74,7 @@ export default function Monetization() {
           // 3. verify payment on server
           try {
             const verifyRes = await axios.post(
-              '${API}/api/monetization/verify-payment',
+              'https://flowspace-3ief.onrender.com/api/monetization/verify-payment',
               {
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_payment_id: response.razorpay_payment_id,
@@ -120,7 +120,7 @@ export default function Monetization() {
     if (!withdrawDetails.trim()) return alert('Please enter payment details')
     setWithdrawing(true)
     try {
-      const res = await axios.post('${API}/api/monetization/withdraw',
+      const res = await axios.post('https://flowspace-3ief.onrender.com/api/monetization/withdraw',
         { amount: withdrawAmount, method: withdrawMethod, details: withdrawDetails }, { headers })
       setWallet(prev => ({ ...prev, balance: res.data.newBalance }))
       setShowWithdraw(false)

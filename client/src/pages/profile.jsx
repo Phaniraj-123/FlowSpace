@@ -31,7 +31,7 @@ export default function Profile() {
 
   async function fetchStats() {
     try {
-      const res = await axios.get('${API}/api/users/me/stats', { headers })
+      const res = await axios.get('https://flowspace-3ief.onrender.com/api/users/me/stats', { headers })
       // console.log("stats:", res.data)
       setStats(res.data)
     } catch (err) { console.log(err) }
@@ -43,7 +43,7 @@ export default function Profile() {
     try {
       const formData = new FormData()
       formData.append('avatar', file)
-      const res = await axios.put('${API}/api/users/me/profile', formData, {
+      const res = await axios.put('https://flowspace-3ief.onrender.com/api/users/me/profile', formData, {
         headers: { ...headers, 'Content-Type': 'multipart/form-data' }
       })
       updateUser({ avatar: res.data.avatar })
@@ -55,7 +55,7 @@ export default function Profile() {
   async function saveBio() {
     setSavingBio(true)
     try {
-      const res = await axios.put('${API}/api/users/me/profile',
+      const res = await axios.put('https://flowspace-3ief.onrender.com/api/users/me/profile',
         { bio }, { headers })
       updateUser({ bio: res.data.bio })
       setEditingBio(false)

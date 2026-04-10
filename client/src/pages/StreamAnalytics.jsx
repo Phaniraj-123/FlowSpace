@@ -22,7 +22,7 @@ export default function StreamAnalytics() {
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        axios.get('${API}/api/livestream/analytics/me', { headers })
+        axios.get('https://flowspace-3ief.onrender.com/api/livestream/analytics/me', { headers })
             .then(res => setData(res.data))
             .catch(err => console.log(err))
             .finally(() => setLoading(false))

@@ -15,7 +15,7 @@ export default function Login() {
     e.preventDefault()
     setLoading(true)
     try {
-      const res = await axios.post('${API}/api/auth/login', form)
+      const res = await axios.post('https://flowspace-3ief.onrender.com/api/auth/login', form)
       login(res.data.user, res.data.accessToken)
       navigate('/live')
     } catch (err) {

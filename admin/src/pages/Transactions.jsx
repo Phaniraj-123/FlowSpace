@@ -7,7 +7,7 @@ export default function Transactions({ token }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    axios.get('${API}/api/admin/transactions', { headers })
+    axios.get('https://flowspace-3ief.onrender.com/api/admin/transactions', { headers })
       .then(res => setTransactions(res.data))
       .finally(() => setLoading(false))
   }, [])

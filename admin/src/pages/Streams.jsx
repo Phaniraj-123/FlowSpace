@@ -7,7 +7,7 @@ export default function Streams({ token }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    axios.get('${API}/api/admin/streams', { headers })
+    axios.get('https://flowspace-3ief.onrender.com/api/admin/streams', { headers })
       .then(res => setStreams(res.data))
       .finally(() => setLoading(false))
   }, [])

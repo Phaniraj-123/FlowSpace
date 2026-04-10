@@ -11,7 +11,7 @@ export function LiveStreamProvider({ children, socket }) {
   const socketRef = useRef(null)
 
   if (!socketRef.current) {
-    socketRef.current = socket || io('${API}', {
+    socketRef.current = socket || io('https://flowspace-3ief.onrender.com', {
       autoConnect: true,
       withCredentials: true,
       auth: { token: useAuthStore.getState().token }

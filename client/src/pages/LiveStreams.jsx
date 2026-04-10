@@ -65,7 +65,7 @@ export default function LiveStreams() {
   async function fetchStreamKey() {
     try {
       const freshToken = useAuthStore.getState().token
-      const res = await axios.get('${API}/api/users/me/stream-key', {
+      const res = await axios.get('https://flowspace-3ief.onrender.com/api/users/me/stream-key', {
         headers: { Authorization: `Bearer ${freshToken}` }
       })
       setStreamKey(res.data.streamKey)
@@ -76,7 +76,7 @@ export default function LiveStreams() {
     if (!confirm('Regenerate stream key? Your old key will stop working.')) return
     try {
       const freshToken = useAuthStore.getState().token
-      const res = await axios.post('${API}/api/users/me/stream-key/regenerate', {}, {
+      const res = await axios.post('https://flowspace-3ief.onrender.com/api/users/me/stream-key/regenerate', {}, {
         headers: { Authorization: `Bearer ${freshToken}` }
       })
       setStreamKey(res.data.streamKey)
@@ -93,7 +93,7 @@ export default function LiveStreams() {
       formData.append('category', category)
       formData.append('isPPV', isPPV)
       formData.append('ppvPrice', ppvPrice)
-      const res = await axios.post('${API}/api/livestream/start',
+      const res = await axios.post('https://flowspace-3ief.onrender.com/api/livestream/start',
         formData, { headers: { ...headers, 'Content-Type': 'multipart/form-data' } })
       navigate(`/live/${res.data._id}?host=true`)
     } catch (err) { console.log(err) }

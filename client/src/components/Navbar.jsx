@@ -42,7 +42,7 @@ export default function Navbar() {
   async function fetchUnread() {
     try {
       const token = useAuthStore.getState().token
-      const res = await axios.get('${API}/api/notifications/unread', {
+      const res = await axios.get('https://flowspace-3ief.onrender.com/api/notifications/unread', {
         headers: { Authorization: `Bearer ${token}` }
       })
       setUnread(res.data.count || 0)
@@ -52,7 +52,7 @@ export default function Navbar() {
   async function fetchUnreadDMs() {
     try {
       const token = useAuthStore.getState().token
-      const res = await axios.get('${API}/api/messages/unread', {
+      const res = await axios.get('https://flowspace-3ief.onrender.com/api/messages/unread', {
         headers: { Authorization: `Bearer ${token}` }
       })
       setUnreadDMs(res.data.count || 0)
@@ -64,7 +64,7 @@ export default function Navbar() {
       const token = useAuthStore.getState().token
       const currentUser = useAuthStore.getState().user
       if (!token || !currentUser) return
-      const res = await axios.get('${API}/api/livestream', {
+      const res = await axios.get('https://flowspace-3ief.onrender.com/api/livestream', {
         headers: { Authorization: `Bearer ${token}` }
       })
       const myStream = res.data.find(s =>

@@ -58,7 +58,7 @@ export default function Messages() {
   }, [messages])
 
   function setupSocket() {
-    socket = io('${API}', { auth: { token } })
+    socket = io('https://flowspace-3ief.onrender.com', { auth: { token } })
     socket.on('dm:message', (message) => {
       setMessages(prev => {
         if (prev.find(m => m._id === message._id)) return prev
@@ -72,7 +72,7 @@ export default function Messages() {
 
   async function fetchConversations() {
     try {
-      const res = await axios.get('${API}/api/messages/conversations', { headers })
+      const res = await axios.get('https://flowspace-3ief.onrender.com/api/messages/conversations', { headers })
       setConversations(res.data)
     } catch (err) { console.log(err) }
     finally { setLoading(false) }
@@ -96,7 +96,7 @@ export default function Messages() {
 
   async function startConversation(userId) {
     try {
-      const res = await axios.post('${API}/api/messages/conversations',
+      const res = await axios.post('https://flowspace-3ief.onrender.com/api/messages/conversations',
         { userId }, { headers })
       setSearchQuery('')
       setSearchResults([])

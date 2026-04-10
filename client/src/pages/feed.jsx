@@ -37,7 +37,7 @@ export default function Feed() {
 
   async function fetchFeed() {
     try {
-      const res = await axios.get('${API}/api/feed', { headers })
+      const res = await axios.get('https://flowspace-3ief.onrender.com/api/feed', { headers })
       setPosts(res.data.posts)
     } catch (err) { console.log(err) }
     finally { setLoading(false) }
@@ -45,7 +45,7 @@ export default function Feed() {
 
   async function fetchSuggestions() {
     try {
-      const res = await axios.get('${API}/api/users/me/suggestions', { headers })
+      const res = await axios.get('https://flowspace-3ief.onrender.com/api/users/me/suggestions', { headers })
       setSuggestions(res.data)
     } catch (err) { console.log(err) }
   }
@@ -57,7 +57,7 @@ export default function Feed() {
       const formData = new FormData()
       formData.append('content', content)
       if (mediaFile) formData.append('media', mediaFile)
-      const res = await axios.post('${API}/api/feed', formData, {
+      const res = await axios.post('https://flowspace-3ief.onrender.com/api/feed', formData, {
         headers: { ...headers, 'Content-Type': 'multipart/form-data' }
       })
       setPosts([res.data, ...posts])
@@ -117,7 +117,7 @@ export default function Feed() {
     setSharePost(postId)
     setSharePostId(null)
     try {
-      const res = await axios.get('${API}/api/messages/conversations', { headers })
+      const res = await axios.get('https://flowspace-3ief.onrender.com/api/messages/conversations', { headers })
       setConversations(res.data)
     } catch (err) { console.log(err) }
     setShowDMModal(true)

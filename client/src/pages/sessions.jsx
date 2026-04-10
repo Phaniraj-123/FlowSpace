@@ -26,7 +26,7 @@ export default function Sessions() {
 
   useEffect(() => {
     fetchLiveSessions()
-    socket = io('${API}', { auth: { token } })
+    socket = io('https://flowspace-3ief.onrender.com', { auth: { token } })
     socket.on('room:updated', (data) => { if (data.participants) setParticipants(data.participants) })
     socket.on('timer:tick', ({ remaining }) => setTimeLeft(remaining))
     socket.on('timer:done', () => { setIsRunning(false); setPhase(p => p === 'work' ? 'break' : 'work') })
@@ -39,7 +39,7 @@ export default function Sessions() {
 
   async function fetchLiveSessions() {
     try {
-      const res = await axios.get('${API}/api/sessions/live')
+      const res = await axios.get('https://flowspace-3ief.onrender.com/api/sessions/live')
       setSessions(res.data)
     } catch (err) { console.log(err) }
   }
@@ -48,7 +48,7 @@ export default function Sessions() {
     e.preventDefault()
     if (!title.trim()) return
     try {
-      const res = await axios.post('${API}/api/sessions', { title, duration: 50 }, { headers })
+      const res = await axios.post('https://flowspace-3ief.onrender.com/api/sessions', { title, duration: 50 }, { headers })
       setActiveSession(res.data)
       setTimeLeft(60 * 60)
       setTitle('')

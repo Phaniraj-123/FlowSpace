@@ -7,7 +7,7 @@ export default function Posts({ token }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    axios.get('${API}/api/admin/posts', { headers })
+    axios.get('https://flowspace-3ief.onrender.com/api/admin/posts', { headers })
       .then(res => setPosts(res.data))
       .finally(() => setLoading(false))
   }, [])

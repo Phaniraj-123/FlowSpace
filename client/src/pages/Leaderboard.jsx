@@ -24,7 +24,7 @@ export default function Leaderboard() {
     try {
       const [lbRes, achRes] = await Promise.all([
         axios.get(`${API}/api/leaderboard?type=${lbType}`, { headers }),
-        axios.get('${API}/api/leaderboard/achievements', { headers })
+        axios.get('https://flowspace-3ief.onrender.com/api/leaderboard/achievements', { headers })
       ])
       setLeaderboard(lbRes.data)
       setAchievements(achRes.data)

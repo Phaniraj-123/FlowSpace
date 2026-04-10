@@ -24,7 +24,7 @@ export default function Register() {
 
     setLoading(true)
     try {
-      const res = await axios.post('${API}/api/auth/register', form)
+      const res = await axios.post('https://flowspace-3ief.onrender.com/api/auth/register', form)
       login(res.data.user, res.data.accessToken)
       navigate('/live')
     } catch (err) {

@@ -21,9 +21,9 @@ export default function Analytics() {
   async function fetchData() {
     try {
       const [statsRes, sessionsRes, goalsRes] = await Promise.all([
-        axios.get('${API}/api/users/me/stats', { headers }),
-        axios.get('${API}/api/sessions/history', { headers }),
-        axios.get('${API}/api/goals/me', { headers })
+        axios.get('https://flowspace-3ief.onrender.com/api/users/me/stats', { headers }),
+        axios.get('https://flowspace-3ief.onrender.com/api/sessions/history', { headers }),
+        axios.get('https://flowspace-3ief.onrender.com/api/goals/me', { headers })
       ])
       setStats(statsRes.data)
       setSessions(sessionsRes.data)

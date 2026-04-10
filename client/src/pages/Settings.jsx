@@ -37,13 +37,13 @@ export default function Settings() {
 
   async function fetchSettings() {
     try {
-      const res = await axios.get('${API}/api/settings', { headers })
+      const res = await axios.get('https://flowspace-3ief.onrender.com/api/settings', { headers })
       setTheme(res.data.settings?.theme || 'dark')
       setNotifs(res.data.settings?.notifications || notifs)
       setPrivacy(res.data.settings?.privacy || privacy)
       setBlockedUsers(res.data.blockedUsers || [])
       setSessions(res.data.sessions || [])
-      const meRes = await axios.get('${API}/api/users/me', { headers })
+      const meRes = await axios.get('https://flowspace-3ief.onrender.com/api/users/me', { headers })
       setDisplayName(meRes.data.name || '')
       setNewUsername(meRes.data.username || '')
     } catch (err) { console.log(err) }
@@ -56,7 +56,7 @@ export default function Settings() {
     setSaving(true)
     try {
       const freshToken = useAuthStore.getState().token
-      const res = await axios.put('${API}/api/settings/profile',
+      const res = await axios.put('https://flowspace-3ief.onrender.com/api/settings/profile',
         { name: displayName, username: newUsername },
         { headers: { Authorization: `Bearer ${freshToken}` } })
       updateUser({ name: res.data.name, username: res.data.username })
@@ -71,14 +71,14 @@ export default function Settings() {
     document.documentElement.setAttribute('data-theme', newTheme)
     localStorage.setItem('theme', newTheme)
     try {
-      await axios.put('${API}/api/settings/theme', { theme: newTheme }, { headers })
+      await axios.put('https://flowspace-3ief.onrender.com/api/settings/theme', { theme: newTheme }, { headers })
     } catch (err) { console.log(err) }
   }
 
   async function saveNotifications() {
     setSaving(true)
     try {
-      await axios.put('${API}/api/settings/notifications', { notifications: notifs }, { headers })
+      await axios.put('https://flowspace-3ief.onrender.com/api/settings/notifications', { notifications: notifs }, { headers })
       alert(' Notification settings saved!')
     } catch (err) { console.log(err) }
     finally { setSaving(false) }
@@ -87,7 +87,7 @@ export default function Settings() {
   async function savePrivacy() {
     setSaving(true)
     try {
-      await axios.put('${API}/api/settings/privacy', { privacy }, { headers })
+      await axios.put('https://flowspace-3ief.onrender.com/api/settings/privacy', { privacy }, { headers })
       alert(' Privacy settings saved!')
     } catch (err) { console.log(err) }
     finally { setSaving(false) }
@@ -99,7 +99,7 @@ export default function Settings() {
     if (newPassword.length < 6) return setPasswordMsg('Password must be at least 6 characters')
     setSaving(true)
     try {
-      await axios.put('${API}/api/settings/password', { currentPassword, newPassword }, { headers })
+      await axios.put('https://flowspace-3ief.onrender.com/api/settings/password', { currentPassword, newPassword }, { headers })
       setPasswordMsg(' Password changed successfully!')
       setCurrentPassword(''); setNewPassword(''); setConfirmPassword('')
     } catch (err) {
@@ -124,7 +124,7 @@ export default function Settings() {
   async function deleteAccount() {
     if (!deletePassword) return alert('Enter your password')
     try {
-      await axios.delete('${API}/api/settings/account', { data: { password: deletePassword }, headers })
+      await axios.delete('https://flowspace-3ief.onrender.com/api/settings/account', { data: { password: deletePassword }, headers })
       logout(); navigate('/login')
     } catch (err) { alert(err.response?.data?.error || 'Failed to delete account') }
   }

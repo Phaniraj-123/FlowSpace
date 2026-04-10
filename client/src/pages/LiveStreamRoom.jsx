@@ -135,7 +135,7 @@ export default function LiveStreamRoom() {
 
   async function fetchWallet() {
     try {
-      const res = await axios.get('${API}/api/livestream/wallet/me', { headers })
+      const res = await axios.get('https://flowspace-3ief.onrender.com/api/livestream/wallet/me', { headers })
       setWallet(res.data)
     } catch (err) { console.log(err) }
   }

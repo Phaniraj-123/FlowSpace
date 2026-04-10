@@ -7,7 +7,7 @@ export default function Dashboard({ token }) {
   const [analytics, setAnalytics] = useState(null)
 
   useEffect(() => {
-    axios.get('${API}/api/admin/analytics', { headers })
+    axios.get('https://flowspace-3ief.onrender.com/api/admin/analytics', { headers })
       .then(res => setAnalytics(res.data))
       .catch(console.log)
   }, [])

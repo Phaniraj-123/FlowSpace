@@ -32,7 +32,7 @@ const savedTheme = localStorage.getItem('theme') || 'dark'
 document.documentElement.setAttribute('data-theme', savedTheme)
 
 // create socket ONCE outside components
-const socket = io('${API}', {
+const socket = io('https://flowspace-3ief.onrender.com', {
   autoConnect: false,
   withCredentials: true,
 })
@@ -52,7 +52,7 @@ function Layout() {
       socket.on('connect', () => console.log(' socket connected:', socket.id))
       socket.on('connect_error', (err) => console.log(' error:', err.message))
 
-      axios.get('${API}/api/users/me', {
+      axios.get('https://flowspace-3ief.onrender.com/api/users/me', {
         headers: { Authorization: `Bearer ${token}` }
       }).then(res => {
         updateUser({

@@ -1,3 +1,3 @@
-const API = import.meta.env.VITE_API_URL;
+const API = 'https://flowspace-3ief.onrender.com'
 
 export default API;

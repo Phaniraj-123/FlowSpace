@@ -89,7 +89,7 @@ export default function UserProfile() {
     setShowSubModal(false)
     try {
       const freshToken = useAuthStore.getState().token
-      const orderRes = await axios.post('${API}/api/plans/create-order', {
+      const orderRes = await axios.post('https://flowspace-3ief.onrender.com/api/plans/create-order', {
         creatorId: profile._id, months, price
       }, { headers: { Authorization: `Bearer ${freshToken}` } })
 
@@ -101,7 +101,7 @@ export default function UserProfile() {
         order_id: orderId,
         handler: async function (response) {
           const freshToken2 = useAuthStore.getState().token
-          await axios.post('${API}/api/plans/verify', {
+          await axios.post('https://flowspace-3ief.onrender.com/api/plans/verify', {
             razorpay_order_id: response.razorpay_order_id,
             razorpay_payment_id: response.razorpay_payment_id,
             razorpay_signature: response.razorpay_signature,

@@ -17,7 +17,7 @@ export default function Goals() {
 
   async function fetchGoals() {
     try {
-      const res = await axios.get('${API}/api/goals/me', { headers })
+      const res = await axios.get('https://flowspace-3ief.onrender.com/api/goals/me', { headers })
       setGoals(res.data)
     } catch (err) { console.log(err) }
   }
@@ -26,7 +26,7 @@ export default function Goals() {
     e.preventDefault()
     try {
       const taskList = tasks.split(',').map(t => ({ text: t.trim() })).filter(t => t.text)
-      await axios.post('${API}/api/goals', { title, description, tasks: taskList }, { headers })
+      await axios.post('https://flowspace-3ief.onrender.com/api/goals', { title, description, tasks: taskList }, { headers })
       setTitle(''); setDescription(''); setTasks(''); setShowForm(false)
       fetchGoals()
     } catch (err) { console.log(err) }
