@@ -14,7 +14,7 @@ export default function Login({ onLogin }) {
         setError('')
         try {
             console.log('submitting...', email, password)
-            const res = await axios.post('https://flowspace-3ief.onrender.com/api/auth/login', { email, password })
+            const res = await axios.post('https://flowspace-3ief.onrender.com/api/auth/login', { identifier: email, password })
             console.log('login response:', res.data)
             if (!res.data.user?.isAdmin) {
                 setError('You are not an admin!')
