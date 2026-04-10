@@ -1,5 +1,6 @@
-// Force Node to use the latest TLS versions
-require('dotenv').config()
+if (process.env.NODE_ENV !== 'production') {
+  require('dotenv').config({ path: require('path').join(__dirname, '.env') })
+}
 const express = require('express')
 const mongoose = require('mongoose')
 const cors = require('cors')
