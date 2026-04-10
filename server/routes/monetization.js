@@ -17,7 +17,7 @@ function getRazorpay() {
 
 // coin packages
 const COIN_PACKAGES = [
-  { id: 'starter', name: 'Starter', coins: 100, price: 99, displayPrice: '₹9.99', bonus: 0 },
+  { id: 'starter', name: 'Starter', coins: 100, price: 999, displayPrice: '₹9.99', bonus: 0 },
   { id: 'basic', name: 'Basic', coins: 500, price: 3299, displayPrice: '₹39.99', bonus: 50 },
   { id: 'popular', name: 'Popular', coins: 1200, price: 6499, displayPrice: '₹64.99', bonus: 200 },
   { id: 'pro', name: 'Pro', coins: 3000, price: 14999, displayPrice: '₹149.99', bonus: 500 },
