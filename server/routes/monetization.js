@@ -28,11 +28,11 @@ const COIN_PACKAGES = [
 router.post('/create-order', protect, async (req, res) => {
   try {
     const { packageId } = req.body
-    console.log('📦 packageId received:', packageId)
-    console.log('🔑 KEY_ID:', process.env.RAZORPAY_KEY_ID)
-    console.log('🔑 KEY_SECRET exists:', !!process.env.RAZORPAY_KEY_SECRET)
+    console.log(' packageId received:', packageId)
+    console.log(' KEY_ID:', process.env.RAZORPAY_KEY_ID)
+    console.log(' KEY_SECRET exists:', !!process.env.RAZORPAY_KEY_SECRET)
     const pkg = COIN_PACKAGES.find(p => p.id === packageId)
-    console.log('📦 pkg found:', pkg)
+    console.log(' pkg found:', pkg)
     if (!pkg) return res.status(400).json({ error: 'Invalid package' })
 
     const order = await getRazorpay().orders.create({
@@ -48,7 +48,7 @@ router.post('/create-order', protect, async (req, res) => {
 
     res.json({ order, pkg, key: process.env.RAZORPAY_KEY_ID })
   } catch (err) {
-    console.error('❌ Razorpay error:', err)
+    console.error(' Razorpay error:', err)
     res.status(500).json({ error: err.message })
   }
 })

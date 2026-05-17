@@ -62,8 +62,8 @@ router.post('/create-order', protect, async (req, res) => {
       return res.status(400).json({ error: 'Missing fields' })
 
     const creator = await User.findById(creatorId)
-    console.log('🎨 creator:', creator?.username, 'tier:', creator?.subscriptionTier)
-    console.log('💰 creating order for amount:', price * 100, 'paise')
+    console.log(' creator:', creator?.username, 'tier:', creator?.subscriptionTier)
+    console.log(' creating order for amount:', price * 100, 'paise')
     if (!creator) return res.status(404).json({ error: 'Creator not found' })
     if (!creator.subscriptionTier)
       return res.status(400).json({ error: 'Creator is not accepting subscriptions' })
@@ -79,7 +79,7 @@ router.post('/create-order', protect, async (req, res) => {
         price: price.toString()
       }
     })
-    console.log('✅ order created:', order.id)
+    console.log(' order created:', order.id)
 
     res.json({
       orderId: order.id,

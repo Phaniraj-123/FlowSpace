@@ -604,23 +604,23 @@ export default function Messages() {
                   {/* Camera */}
                   <button onClick={() => cameraRef.current.click()} title="Camera" style={{
                     background: 'none', border: '1px solid var(--border2)',
-                    color: 'var(--text2)', borderRadius: 10, padding: '10px 11px',
+                    color: 'var(--text2)', borderRadius: 10, padding: '8px 8px',
                     cursor: 'pointer', display: 'flex', alignItems: 'center', flexShrink: 0
                   }}>
-                    <Camera size={16} />
+                    <Camera size={14} />
                   </button>
 
                   {/* Gallery */}
                   <button onClick={() => fileRef.current.click()} title="Photo/Video" style={{
                     background: 'none', border: '1px solid var(--border2)',
-                    color: 'var(--text2)', borderRadius: 10, padding: '10px 11px',
+                    color: 'var(--text2)', borderRadius: 10, padding: '8px 8px',
                     cursor: 'pointer', display: 'flex', alignItems: 'center', flexShrink: 0
                   }}>
                     <Image size={16} />
                   </button>
 
                   {/* Emoji */}
-                  <button onClick={() => setShowEmojis(!showEmojis)} title="Emoji" style={{
+                  {/* <button onClick={() => setShowEmojis(!showEmojis)} title="Emoji" style={{
                     background: showEmojis ? 'var(--indigo-dim)' : 'none',
                     border: '1px solid var(--border2)',
                     color: showEmojis ? 'var(--indigo-light)' : 'var(--text2)',
@@ -628,7 +628,7 @@ export default function Messages() {
                     cursor: 'pointer', display: 'flex', alignItems: 'center', flexShrink: 0
                   }}>
                     <Smile size={16} />
-                  </button>
+                  </button> */}
 
                   {/* Text input */}
                   <input
@@ -637,7 +637,7 @@ export default function Messages() {
                     onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendMessage()}
                     placeholder="Type a message..."
                     style={{
-                      flex: 1, padding: '10px 14px',
+                      flex: 1, padding: '10px 10px',
                       background: 'var(--bg3)', border: '1px solid var(--border2)',
                       borderRadius: 10, color: 'var(--text)', fontSize: 14, outline: 'none'
                     }}
@@ -658,7 +658,7 @@ export default function Messages() {
                     </button>
                   ) : (
                     <button onClick={startRecording} title="Voice message" style={{
-                      padding: '10px 14px', background: 'var(--bg3)',
+                      padding: '8px 8px', background: 'var(--bg3)',
                       color: 'var(--text2)', border: '1px solid var(--border2)',
                       borderRadius: 10, cursor: 'pointer',
                       display: 'flex', alignItems: 'center', flexShrink: 0

@@ -9,7 +9,7 @@ const upload = require('../middleware/upload')
 const { uploadToCloudinary } = require('../utils/cloudinary')
 const crypto = require('crypto')
 
-// ✅ SPECIFIC routes FIRST
+//  SPECIFIC routes FIRST
 
 // GET me
 router.get('/me', protect, async (req, res) => {
@@ -192,7 +192,7 @@ router.post('/me/stream-key/regenerate', protect, async (req, res) => {
 })
 
 
-// ✅ DYNAMIC route LAST
+//  DYNAMIC route LAST
 router.get('/:username', async (req, res) => {
   try {
     const user = await User.findOne({ username: req.params.username })

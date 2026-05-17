@@ -248,11 +248,11 @@ export default function UserProfile() {
           <div className="profile-header-row">
             {/* Avatar + name */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 14, flex: 1, minWidth: 0 }}>
-              <Avatar src={profile.avatar} name={profile.username} size={64} />
+              <Avatar src={profile.avatar} name={profile.username} size={44} />
               <div style={{ minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 0, flexWrap: 'wrap' }}>
                   <h2 style={{
-                    fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 800,
+                    fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 500,
                     whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
                   }}>
                     {profile.username}
@@ -267,7 +267,7 @@ export default function UserProfile() {
 
             {/* Actions: Follow + 3-dot */}
             <div className="profile-actions">
-              {!isOwnProfile && (
+              {/* {!isOwnProfile && (
                 <button className="profile-follow-btn" onClick={toggleFollow} style={{
                   background: isFollowing ? 'var(--bg3)' : 'var(--indigo)',
                   color: isFollowing ? 'var(--text2)' : '#fff',
@@ -283,7 +283,7 @@ export default function UserProfile() {
                 }}>
                   Edit Profile
                 </button>
-              )}
+              )} */}
 
               {/* 3-dot menu for non-own profiles */}
               {!isOwnProfile && (
@@ -291,7 +291,7 @@ export default function UserProfile() {
                   <button onClick={() => setShowMoreMenu(prev => !prev)} style={{
                     background: 'var(--bg3)', border: '1px solid var(--border2)',
                     borderRadius: 10, padding: '8px 10px', cursor: 'pointer',
-                    color: 'var(--text2)', display: 'flex', alignItems: 'center'
+                    color: 'var(--text2)', display: 'flex', alignItems: 'center', overflow: 'auto'
                   }}>
                     <MoreVertical size={17} />
                   </button>
@@ -356,6 +356,29 @@ export default function UserProfile() {
             </div>
           </div>
         </div>
+        {/* Follow / Edit — now below stats */}
+        {!isOwnProfile && (
+          <button onClick={toggleFollow} style={{
+            padding: '9px 24px', borderRadius: 20, fontSize: 13,
+            fontWeight: 600, cursor: 'pointer',
+            background: isFollowing ? 'var(--bg3)' : 'var(--indigo)',
+            color: isFollowing ? 'var(--text2)' : '#fff',
+            border: isFollowing ? '1px solid var(--border2)' : 'none',
+            display: 'flex', alignItems: 'center', gap: 6
+          }}>
+            {isFollowing ? <><UserCheck size={14} /> Following</> : <><UserPlus size={14} /> Follow</>}
+          </button>
+        )}
+        {isOwnProfile && (
+          <button onClick={() => navigate('/profile')} style={{
+            padding: '9px 24px', borderRadius: 20, fontSize: 13,
+            fontWeight: 600, cursor: 'pointer',
+            background: 'var(--bg3)', color: 'var(--text2)',
+            border: '1px solid var(--border2)'
+          }}>
+            Edit Profile
+          </button>
+        )}
 
         {/* Tabs */}
         <div className="fade-up-2" style={{

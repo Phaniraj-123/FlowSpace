@@ -25,9 +25,9 @@ export default function Feed() {
   const headers = { Authorization: `Bearer ${token}` }
   const [viewerSrc, setViewerSrc] = useState(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [posting, setPosting] = useState(false)
   const navigate = useNavigate()
 
-  // expose openCreate globally so Navbar + button can trigger it
   useEffect(() => {
     window.__openCreatePost = () => setShowCreateModal(true)
     return () => { delete window.__openCreatePost }
@@ -37,7 +37,7 @@ export default function Feed() {
 
   async function fetchFeed() {
     try {
-      const res = await axios.get('https://flowspace-3ief.onrender.com/api/feed', { headers })
+      const res = await axios.get(`${API}/api/feed`, { headers })
       setPosts(res.data.posts)
     } catch (err) { console.log(err) }
     finally { setLoading(false) }
@@ -45,7 +45,7 @@ export default function Feed() {
 
   async function fetchSuggestions() {
     try {
-      const res = await axios.get('https://flowspace-3ief.onrender.com/api/users/me/suggestions', { headers })
+      const res = await axios.get(`${API}/api/users/me/suggestions`, { headers })
       setSuggestions(res.data)
     } catch (err) { console.log(err) }
   }
@@ -53,19 +53,28 @@ export default function Feed() {
   async function createPost(e) {
     e.preventDefault()
     if (!content.trim() && !mediaFile) return
+    if (posting) return
+    setPosting(true)
     try {
       const formData = new FormData()
       formData.append('content', content)
       if (mediaFile) formData.append('media', mediaFile)
-      const res = await axios.post('https://flowspace-3ief.onrender.com/api/feed', formData, {
-        headers: { ...headers, 'Content-Type': 'multipart/form-data' }
+
+      // DO NOT set Content-Type manually — let axios set it with the correct boundary
+      const res = await axios.post(`${API}/api/feed`, formData, {
+        headers: { Authorization: `Bearer ${token}` }
       })
       setPosts([res.data, ...posts])
       setContent('')
       setMediaFile(null)
       setMediaPreview(null)
       setShowCreateModal(false)
-    } catch (err) { console.log(err) }
+    } catch (err) {
+      console.log('post error:', err.response?.data || err.message)
+      alert(err.response?.data?.error || 'Failed to post')
+    } finally {
+      setPosting(false)
+    }
   }
 
   async function likePost(postId) {
@@ -117,7 +126,7 @@ export default function Feed() {
     setSharePost(postId)
     setSharePostId(null)
     try {
-      const res = await axios.get('https://flowspace-3ief.onrender.com/api/messages/conversations', { headers })
+      const res = await axios.get(`${API}/api/messages/conversations`, { headers })
       setConversations(res.data)
     } catch (err) { console.log(err) }
     setShowDMModal(true)
@@ -174,7 +183,6 @@ export default function Feed() {
       `}</style>
 
       <div className="feed-layout">
-        {/* Main Feed */}
         <div>
           <h1 className="fade-up" style={{
             fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 800,
@@ -202,7 +210,6 @@ export default function Feed() {
 
             return (
               <div key={post._id} className="post-card fade-up" style={{ animationDelay: `${i * 0.05}s` }}>
-                {/* Author */}
                 <div style={{ display: 'flex', gap: 12, marginBottom: 14 }}>
                   <Avatar src={post.author?.avatar} name={post.author?.username} size={40} />
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -223,7 +230,6 @@ export default function Feed() {
                   </div>
                 </div>
 
-                {/* Boost */}
                 {isOwner && !post.isBoosted && (
                   <button onClick={async (e) => {
                     e.stopPropagation()
@@ -245,7 +251,6 @@ export default function Feed() {
                   <span style={{ fontSize: 11, color: '#f59e0b', fontWeight: 700, display: 'block', marginBottom: 8 }}>⚡ Boosted</span>
                 )}
 
-                {/* Content */}
                 <p style={{ lineHeight: 1.75, fontSize: 15, color: 'var(--text)', marginBottom: 16 }}>
                   {post.content}
                 </p>
@@ -266,14 +271,13 @@ export default function Feed() {
                   }} />
                 )}
 
-                {/* Actions */}
                 <div style={{
                   display: 'flex', gap: 8, alignItems: 'center',
                   borderTop: '1px solid var(--border)',
                   paddingTop: 14, marginBottom: isExpanded ? 16 : 0
                 }}>
                   <button onClick={() => likePost(post._id)} style={{
-                    background: 'none', border: 'none',
+                    border: 'none',
                     color: isLiked ? '#f43f5e' : 'var(--text2)',
                     cursor: 'pointer', fontSize: 13,
                     display: 'flex', alignItems: 'center', gap: 6, transition: 'color 0.15s',
@@ -354,7 +358,6 @@ export default function Feed() {
                   </div>
                 </div>
 
-                {/* Comments */}
                 {isExpanded && (
                   <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
                     {post.comments?.length > 0 && (
@@ -403,7 +406,6 @@ export default function Feed() {
           })}
         </div>
 
-        {/* Sidebar — hidden on mobile via CSS */}
         <div className="feed-sidebar">
           <div className="fade-up-3" style={{
             background: 'var(--bg2)', border: '1px solid var(--border)',
@@ -452,7 +454,6 @@ export default function Feed() {
             boxShadow: '0 -8px 40px #0008',
             animation: 'slideUp 0.25s ease'
           }}>
-            {/* Handle */}
             <div style={{
               width: 40, height: 4, borderRadius: 2,
               background: 'var(--border2)', margin: '0 auto 20px'
@@ -488,7 +489,7 @@ export default function Feed() {
                     ) : (
                       <img src={mediaPreview} alt="preview" style={{ width: '100%', borderRadius: 10, maxHeight: 260, objectFit: 'cover' }} />
                     )}
-                    <button onClick={() => { setMediaFile(null); setMediaPreview(null) }} style={{
+                    <button type="button" onClick={() => { setMediaFile(null); setMediaPreview(null) }} style={{
                       position: 'absolute', top: 8, right: 8,
                       background: '#00000088', border: 'none', color: '#fff',
                       borderRadius: '50%', width: 28, height: 28, cursor: 'pointer', fontSize: 14
@@ -511,11 +512,12 @@ export default function Feed() {
                   }}>
                     <Image size={14} /> Photo/Video
                   </button>
-                  <button type="submit" style={{
-                    padding: '9px 24px', background: 'var(--indigo)',
+                  <button type="submit" disabled={posting} style={{
+                    padding: '9px 24px', background: posting ? 'var(--border2)' : 'var(--indigo)',
                     color: '#fff', border: 'none', borderRadius: 20,
-                    fontSize: 14, fontWeight: 600, cursor: 'pointer'
-                  }}>Post</button>
+                    fontSize: 14, fontWeight: 600, cursor: posting ? 'default' : 'pointer',
+                    opacity: posting ? 0.7 : 1
+                  }}>{posting ? 'Posting...' : 'Post'}</button>
                 </div>
               </form>
             </div>
@@ -523,7 +525,6 @@ export default function Feed() {
         </div>
       )}
 
-      {/* DM Share Modal */}
       {showDMModal && (
         <div style={{
           position: 'fixed', inset: 0, background: '#00000088',

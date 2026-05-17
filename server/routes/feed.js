@@ -56,7 +56,7 @@ router.post('/', protect, upload.single('media'), async (req, res) => {
     const populated = await post.populate('author', 'username avatar subscriptionTier')
     res.status(201).json(populated)
   } catch (err) {
-    console.log('❌ error:', err.message)
+    console.log(' error:', err.message)
     res.status(500).json({ error: err.message })
   }
 })

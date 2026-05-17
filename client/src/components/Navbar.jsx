@@ -2,7 +2,7 @@ import { useAuthStore } from '../store/authStore'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useState, useEffect, useRef } from 'react'
 import axios from 'axios'
-import { Home, Search, Bell, User, LogOut, Zap, TrendingUp, Trophy, MessageCircle, Radio, Coins, Menu, X, Target, Timer, Crown, Settings, ChevronLeft, Plus } from 'lucide-react'
+import { Home, Search, Bell, User, LogOut, TrendingUp, Trophy, MessageCircle, Radio, Coins, Menu, X, Target, Timer, Crown, Settings, ChevronLeft, Plus } from 'lucide-react'
 import { useLiveStream } from '../context/LiveStreamContext'
 import Avatar from './Avatar'
 import API from "../api"
@@ -13,19 +13,16 @@ export default function Navbar() {
   const location = useLocation()
   const [unread, setUnread] = useState(0)
   const [unreadDMs, setUnreadDMs] = useState(0)
-  const [activeStream, setActiveStream] = useState(null)
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef(null)
   const { activeStreamId, isHosting } = useLiveStream()
 
+  const isOnFeed = location.pathname === '/feed'
+
   useEffect(() => {
-    if (user) {
-      fetchUnread()
-      fetchUnreadDMs()
-      checkActiveStream()
-    }
+    if (user) { fetchUnread(); fetchUnreadDMs() }
     const interval = setInterval(() => {
-      if (user) { fetchUnread(); fetchUnreadDMs(); checkActiveStream() }
+      if (user) { fetchUnread(); fetchUnreadDMs() }
     }, 30000)
     window.addEventListener('dm:read', fetchUnreadDMs)
     return () => { clearInterval(interval); window.removeEventListener('dm:read', fetchUnreadDMs) }
@@ -42,7 +39,7 @@ export default function Navbar() {
   async function fetchUnread() {
     try {
       const token = useAuthStore.getState().token
-      const res = await axios.get('https://flowspace-3ief.onrender.com/api/notifications/unread', {
+      const res = await axios.get(`${API}/api/notifications/unread`, {
         headers: { Authorization: `Bearer ${token}` }
       })
       setUnread(res.data.count || 0)
@@ -52,50 +49,33 @@ export default function Navbar() {
   async function fetchUnreadDMs() {
     try {
       const token = useAuthStore.getState().token
-      const res = await axios.get('https://flowspace-3ief.onrender.com/api/messages/unread', {
+      const res = await axios.get(`${API}/api/messages/unread`, {
         headers: { Authorization: `Bearer ${token}` }
       })
       setUnreadDMs(res.data.count || 0)
     } catch (err) { }
   }
 
-  async function checkActiveStream() {
-    try {
-      const token = useAuthStore.getState().token
-      const currentUser = useAuthStore.getState().user
-      if (!token || !currentUser) return
-      const res = await axios.get('https://flowspace-3ief.onrender.com/api/livestream', {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      const myStream = res.data.find(s =>
-        s.host?._id === currentUser._id || s.host?._id === currentUser.id ||
-        s.host === currentUser._id || s.host === currentUser.id
-      )
-      setActiveStream(myStream || null)
-    } catch (err) { }
-  }
-
   function go(path) { navigate(path); setMenuOpen(false) }
-
   function handleLogout() { logout(); navigate('/login'); setMenuOpen(false) }
-
   const isActive = (path) => location.pathname === path
 
   function handlePlusPress() {
     if (location.pathname === '/feed') {
-      // trigger feed's modal directly
       if (window.__openCreatePost) window.__openCreatePost()
     } else {
       navigate('/feed')
-      // slight delay to let feed mount before opening modal
       setTimeout(() => { if (window.__openCreatePost) window.__openCreatePost() }, 300)
     }
   }
 
+  // Center button: shows + always, but Feed icon shows when NOT on feed
+  // When on feed: center slot is + (create)
+  // When not on feed: center slot is Home (feed nav)
   const bottomNav = [
     { icon: <Radio size={22} />, path: '/live', label: 'Live' },
     { icon: <Search size={22} />, path: '/search', label: 'Search' },
-    { icon: null, path: null, label: 'Create', isCreate: true }, // center + button
+    { isCenterBtn: true },
     { icon: <Coins size={22} />, path: '/monetization', label: 'Coins' },
     { icon: <User size={22} />, path: '/profile', label: 'Profile' },
   ]
@@ -134,6 +114,16 @@ export default function Navbar() {
           margin-bottom: 8px;
         }
         .create-btn:active { transform: scale(0.92); }
+        .home-center-btn {
+          width: 48px; height: 48px; border-radius: 16px;
+          background: var(--bg3);
+          border: 1px solid var(--border2);
+          display: flex; align-items: center; justify-content: center;
+          cursor: pointer;
+          transition: transform 0.15s;
+          margin-bottom: 8px;
+        }
+        .home-center-btn:active { transform: scale(0.92); }
       `}</style>
 
       {/* TOP BAR */}
@@ -143,7 +133,6 @@ export default function Navbar() {
         height: 58, display: 'flex', alignItems: 'center',
         justifyContent: 'space-between', padding: '0 16px'
       }}>
-        {/* Logo + back */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {!['/live', '/feed', '/search', '/monetization', '/profile'].includes(location.pathname) && (
             <button onClick={() => navigate(-1)} style={{
@@ -163,9 +152,7 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* Right side */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }} ref={menuRef}>
-          {/* Notifications */}
           <button className="nav-icon-btn" onClick={() => go('/notifications')}
             style={{ color: isActive('/notifications') ? 'var(--indigo)' : 'var(--text2)' }}>
             <Bell size={20} />
@@ -179,7 +166,6 @@ export default function Navbar() {
             )}
           </button>
 
-          {/* Messages */}
           <button className="nav-icon-btn" onClick={() => go('/messages')}
             style={{ color: isActive('/messages') ? 'var(--indigo)' : 'var(--text2)' }}>
             <MessageCircle size={20} />
@@ -193,7 +179,6 @@ export default function Navbar() {
             )}
           </button>
 
-          {/* Hamburger */}
           <button onClick={() => setMenuOpen(prev => !prev)} style={{
             background: menuOpen ? 'var(--bg2)' : 'none',
             border: '1px solid var(--border)',
@@ -203,7 +188,6 @@ export default function Navbar() {
             {menuOpen ? <X size={18} /> : <Menu size={18} />}
           </button>
 
-          {/* Dropdown */}
           {menuOpen && (
             <div style={{
               position: 'absolute', top: 58, right: 0,
@@ -211,7 +195,6 @@ export default function Navbar() {
               borderRadius: '0 0 16px 16px', minWidth: 220,
               boxShadow: '0 8px 32px #0006', zIndex: 200, overflow: 'hidden'
             }}>
-              {/* User info */}
               <div style={{
                 padding: '14px 16px', borderBottom: '1px solid var(--border)',
                 display: 'flex', alignItems: 'center', gap: 10
@@ -265,12 +248,21 @@ export default function Navbar() {
         justifyContent: 'space-around', padding: '0 8px'
       }}>
         {bottomNav.map((item, idx) => {
-          if (item.isCreate) {
+          if (item.isCenterBtn) {
             return (
-              <div key="create" style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
-                <button className="create-btn" onClick={handlePlusPress}>
-                  <Plus size={22} color="#fff" strokeWidth={2.5} />
-                </button>
+              <div key="center" style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+                {isOnFeed ? (
+                  // On feed → show + create button
+                  <button className="create-btn" onClick={handlePlusPress} title="Create post">
+                    <Plus size={22} color="#fff" strokeWidth={2.5} />
+                  </button>
+                ) : (
+                  // Not on feed → show Home button to go to feed
+                  <button className="home-center-btn" onClick={() => go('/feed')} title="Feed"
+                    style={{ color: isActive('/feed') ? 'var(--indigo)' : 'var(--text2)' }}>
+                    <Home size={22} />
+                  </button>
+                )}
               </div>
             )
           }
@@ -293,7 +285,6 @@ export default function Navbar() {
         })}
       </nav>
 
-      {/* Live bubble */}
       {activeStreamId && isHosting && (
         <div onClick={() => navigate(`/live/${activeStreamId}?host=true`)} style={{
           position: 'fixed', bottom: 76, right: 16,
