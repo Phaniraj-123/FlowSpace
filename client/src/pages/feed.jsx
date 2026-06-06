@@ -119,7 +119,7 @@ export default function Feed() {
   function copyLink(postId) {
     navigator.clipboard.writeText(`${window.location.origin}/post/${postId}`)
     setSharePostId(null)
-    alert('✅ Link copied!')
+    alert(' Link copied!')
   }
 
   async function shareToFollowers(postId) {
@@ -138,7 +138,7 @@ export default function Feed() {
       await axios.post(`${API}/api/messages/${conversationId}`,
         { content: `Check out this post: ${postUrl}` }, { headers })
       setShowDMModal(false)
-      alert('✅ Shared!')
+      alert('Post shared!')
     } catch (err) { console.log(err) }
   }
 
@@ -209,11 +209,11 @@ export default function Feed() {
             const isOwner = post.author?._id === user?._id || post.author?._id === user?.id || post.author === user?._id || post.author === user?.id
 
             return (
-              <div key={post._id} className="post-card fade-up" style={{ animationDelay: `${i * 0.05}s` }}>
-                <div style={{ display: 'flex', gap: 12, marginBottom: 14 }}>
+              <div key={post._id} className="post-card fade-up" style={{ animationDelay: `${i * 0.05}s`, gap: 12 }}>
+                <div style={{ display: 'flex', gap: 1, marginBottom: 1 }}>
                   <Avatar src={post.author?.avatar} name={post.author?.username} size={40} />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                       <p onClick={() => navigate(`/user/${post.author?.username}`)}
                         style={{ fontWeight: 600, fontSize: 14, marginBottom: 2, cursor: 'pointer' }}
                         onMouseEnter={e => e.currentTarget.style.color = 'var(--indigo-light)'}
@@ -438,126 +438,130 @@ export default function Feed() {
             ))}
           </div>
         </div>
-      </div>
+      </div >
 
       {/* Create Post Modal */}
-      {showCreateModal && (
-        <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)',
-          zIndex: 9000, display: 'flex', alignItems: 'flex-end',
-          justifyContent: 'center', padding: '0'
-        }} onClick={() => setShowCreateModal(false)}>
-          <div onClick={e => e.stopPropagation()} style={{
-            background: 'var(--bg2)', border: '1px solid var(--border)',
-            borderRadius: '24px 24px 0 0', padding: 24,
-            width: '100%', maxWidth: 600,
-            boxShadow: '0 -8px 40px #0008',
-            animation: 'slideUp 0.25s ease'
-          }}>
-            <div style={{
-              width: 40, height: 4, borderRadius: 2,
-              background: 'var(--border2)', margin: '0 auto 20px'
-            }} />
+      {
+        showCreateModal && (
+          <div style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)',
+            zIndex: 9000, display: 'flex', alignItems: 'flex-end',
+            justifyContent: 'center', padding: '0'
+          }} onClick={() => setShowCreateModal(false)}>
+            <div onClick={e => e.stopPropagation()} style={{
+              background: 'var(--bg2)', border: '1px solid var(--border)',
+              borderRadius: '24px 24px 0 0', padding: 24,
+              width: '100%', maxWidth: 600,
+              boxShadow: '0 -8px 40px #0008',
+              animation: 'slideUp 0.25s ease'
+            }}>
+              <div style={{
+                width: 40, height: 4, borderRadius: 2,
+                background: 'var(--border2)', margin: '0 auto 20px'
+              }} />
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 17, fontWeight: 700 }}>Create Post</h3>
-              <button onClick={() => setShowCreateModal(false)} style={{
-                background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text2)'
-              }}><X size={20} /></button>
-            </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 17, fontWeight: 700 }}>Create Post</h3>
+                <button onClick={() => setShowCreateModal(false)} style={{
+                  background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text2)'
+                }}><X size={20} /></button>
+              </div>
 
-            <div style={{ display: 'flex', gap: 12 }}>
-              <Avatar src={user?.avatar} name={user?.username} size={40} tier={user?.subscriptionTier} />
-              <form onSubmit={createPost} style={{ flex: 1 }}>
-                <textarea
-                  placeholder="What are you working on today? 🔥"
-                  value={content}
-                  onChange={e => setContent(e.target.value)}
-                  autoFocus
-                  style={{
-                    width: '100%', padding: '10px 0', background: 'none',
-                    border: 'none', borderBottom: '1px solid var(--border)',
-                    color: 'var(--text)', fontSize: 15, outline: 'none',
-                    resize: 'none', minHeight: 80, lineHeight: 1.6,
-                    fontFamily: 'var(--font-body)'
-                  }}
-                />
-                {mediaPreview && (
-                  <div style={{ position: 'relative', marginTop: 12 }}>
-                    {mediaFile?.type.startsWith('video') ? (
-                      <video src={mediaPreview} controls style={{ width: '100%', borderRadius: 10, maxHeight: 260 }} />
-                    ) : (
-                      <img src={mediaPreview} alt="preview" style={{ width: '100%', borderRadius: 10, maxHeight: 260, objectFit: 'cover' }} />
-                    )}
-                    <button type="button" onClick={() => { setMediaFile(null); setMediaPreview(null) }} style={{
-                      position: 'absolute', top: 8, right: 8,
-                      background: '#00000088', border: 'none', color: '#fff',
-                      borderRadius: '50%', width: 28, height: 28, cursor: 'pointer', fontSize: 14
-                    }}>✕</button>
-                  </div>
-                )}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16 }}>
-                  <input
-                    ref={fileRef} type="file" accept="image/*,video/*"
-                    style={{ display: 'none' }}
-                    onChange={e => {
-                      const file = e.target.files[0]
-                      if (file) { setMediaFile(file); setMediaPreview(URL.createObjectURL(file)) }
+              <div style={{ display: 'flex', gap: 12 }}>
+                <Avatar src={user?.avatar} name={user?.username} size={40} tier={user?.subscriptionTier} />
+                <form onSubmit={createPost} style={{ flex: 1 }}>
+                  <textarea
+                    placeholder="What are you working on today? 🔥"
+                    value={content}
+                    onChange={e => setContent(e.target.value)}
+                    autoFocus
+                    style={{
+                      width: '100%', padding: '10px 0', background: 'none',
+                      border: 'none', borderBottom: '1px solid var(--border)',
+                      color: 'var(--text)', fontSize: 15, outline: 'none',
+                      resize: 'none', minHeight: 80, lineHeight: 1.6,
+                      fontFamily: 'var(--font-body)'
                     }}
                   />
-                  <button type="button" onClick={() => fileRef.current.click()} style={{
-                    background: 'none', border: '1px solid var(--border2)',
-                    color: 'var(--text2)', borderRadius: 8, padding: '7px 14px',
-                    cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6
-                  }}>
-                    <Image size={14} /> Photo/Video
-                  </button>
-                  <button type="submit" disabled={posting} style={{
-                    padding: '9px 24px', background: posting ? 'var(--border2)' : 'var(--indigo)',
-                    color: '#fff', border: 'none', borderRadius: 20,
-                    fontSize: 14, fontWeight: 600, cursor: posting ? 'default' : 'pointer',
-                    opacity: posting ? 0.7 : 1
-                  }}>{posting ? 'Posting...' : 'Post'}</button>
-                </div>
-              </form>
+                  {mediaPreview && (
+                    <div style={{ position: 'relative', marginTop: 12 }}>
+                      {mediaFile?.type.startsWith('video') ? (
+                        <video src={mediaPreview} controls style={{ width: '100%', borderRadius: 10, maxHeight: 260 }} />
+                      ) : (
+                        <img src={mediaPreview} alt="preview" style={{ width: '100%', borderRadius: 10, maxHeight: 260, objectFit: 'cover' }} />
+                      )}
+                      <button type="button" onClick={() => { setMediaFile(null); setMediaPreview(null) }} style={{
+                        position: 'absolute', top: 8, right: 8,
+                        background: '#00000088', border: 'none', color: '#fff',
+                        borderRadius: '50%', width: 28, height: 28, cursor: 'pointer', fontSize: 14
+                      }}>✕</button>
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16 }}>
+                    <input
+                      ref={fileRef} type="file" accept="image/*,video/*"
+                      style={{ display: 'none' }}
+                      onChange={e => {
+                        const file = e.target.files[0]
+                        if (file) { setMediaFile(file); setMediaPreview(URL.createObjectURL(file)) }
+                      }}
+                    />
+                    <button type="button" onClick={() => fileRef.current.click()} style={{
+                      background: 'none', border: '1px solid var(--border2)',
+                      color: 'var(--text2)', borderRadius: 8, padding: '7px 14px',
+                      cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6
+                    }}>
+                      <Image size={14} /> Photo/Video
+                    </button>
+                    <button type="submit" disabled={posting} style={{
+                      padding: '9px 24px', background: posting ? 'var(--border2)' : 'var(--indigo)',
+                      color: '#fff', border: 'none', borderRadius: 20,
+                      fontSize: 14, fontWeight: 600, cursor: posting ? 'default' : 'pointer',
+                      opacity: posting ? 0.7 : 1
+                    }}>{posting ? 'Posting...' : 'Post'}</button>
+                  </div>
+                </form>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
-      {showDMModal && (
-        <div style={{
-          position: 'fixed', inset: 0, background: '#00000088',
-          zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center'
-        }} onClick={() => setShowDMModal(false)}>
+      {
+        showDMModal && (
           <div style={{
-            background: 'var(--bg)', border: '1px solid var(--border)',
-            borderRadius: 20, padding: 24, width: 340, maxHeight: 480, overflowY: 'auto'
-          }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 700, marginBottom: 16 }}>
-              Share to DM
-            </h3>
-            {conversations.length === 0 && (
-              <p style={{ color: 'var(--text2)', fontSize: 13 }}>No conversations yet</p>
-            )}
-            {conversations.map(conv => {
-              const other = conv.participants?.find(p => p._id !== user?._id && p._id !== user?.id)
-              return (
-                <div key={conv._id} onClick={() => sendPostDM(conv._id)} style={{
-                  display: 'flex', alignItems: 'center', gap: 12,
-                  padding: '10px', borderRadius: 12, cursor: 'pointer', transition: 'background 0.15s'
-                }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'var(--bg2)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'none'}
-                >
-                  <Avatar src={other?.avatar} name={other?.username} size={38} />
-                  <p style={{ fontWeight: 600, fontSize: 14 }}>{other?.username}</p>
-                </div>
-              )
-            })}
+            position: 'fixed', inset: 0, background: '#00000088',
+            zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center'
+          }} onClick={() => setShowDMModal(false)}>
+            <div style={{
+              background: 'var(--bg)', border: '1px solid var(--border)',
+              borderRadius: 20, padding: 24, width: 340, maxHeight: 480, overflowY: 'auto'
+            }} onClick={e => e.stopPropagation()}>
+              <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 700, marginBottom: 16 }}>
+                Share to DM
+              </h3>
+              {conversations.length === 0 && (
+                <p style={{ color: 'var(--text2)', fontSize: 13 }}>No conversations yet</p>
+              )}
+              {conversations.map(conv => {
+                const other = conv.participants?.find(p => p._id !== user?._id && p._id !== user?.id)
+                return (
+                  <div key={conv._id} onClick={() => sendPostDM(conv._id)} style={{
+                    display: 'flex', alignItems: 'center', gap: 12,
+                    padding: '10px', borderRadius: 12, cursor: 'pointer', transition: 'background 0.15s'
+                  }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg2)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                  >
+                    <Avatar src={other?.avatar} name={other?.username} size={38} />
+                    <p style={{ fontWeight: 600, fontSize: 14 }}>{other?.username}</p>
+                  </div>
+                )
+              })}
+            </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       <ImageViewer src={viewerSrc} onClose={() => setViewerSrc(null)} />
 

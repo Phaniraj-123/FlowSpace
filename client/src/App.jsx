@@ -46,7 +46,7 @@ function Layout() {
 
   useEffect(() => {
     if (token && user) {
-      console.log('🔑 token being sent:', token)
+      // console.log('🔑 token being sent:', token)
       socket.auth = { token }
       socket.connect()
       socket.on('connect', () => console.log(' socket connected:', socket.id))
@@ -86,7 +86,7 @@ function Layout() {
 
   return (
     <>
-    {!policyAccepted && <PolicyGate onAccept={handlePolicyAccept} />}
+      {!policyAccepted && <PolicyGate onAccept={handlePolicyAccept} />}
       {user && !hideNavbar && <Navbar />}
       <Routes>
         <Route path="/" element={<Login />} />
