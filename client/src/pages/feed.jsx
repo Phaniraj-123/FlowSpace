@@ -174,9 +174,9 @@ export default function Feed() {
         .post-card {
           background: var(--bg2);
           border: 1px solid var(--border);
-          border-radius: 16px;
-          padding: 20px;
-          margin-bottom: 16px;
+          border-radius: 6px;
+          padding: 15px;
+          margin-bottom: 1px;
           transition: border-color 0.15s;
         }
         .post-card:hover { border-color: var(--indigo)33; }
@@ -186,7 +186,7 @@ export default function Feed() {
         <div>
           <h1 className="fade-up" style={{
             fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 800,
-            marginBottom: 20, color: 'var(--text)'
+            marginBottom: 20, color: 'var(--text)', background: 'none'
           }}>Feed</h1>
 
           {loading && (

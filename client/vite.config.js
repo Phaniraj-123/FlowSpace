@@ -6,11 +6,17 @@ export default defineConfig({
   define: {
     global: 'globalThis',
     'process.env': {},
-    process: { env: {} },
+    'process.browser': true,
+    'process.version': '"v16.0.0"',
   },
   resolve: {
     alias: {
-      events: 'eventemitter3',
+      process: 'process/browser',
+      stream: 'stream-browserify',
+      util: 'util',
     }
+  },
+  optimizeDeps: {
+    include: ['simple-peer']
   }
 })
