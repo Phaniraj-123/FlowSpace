@@ -27,6 +27,8 @@ export default function Feed() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [posting, setPosting] = useState(false)
   const navigate = useNavigate()
+  const [showDeletePopup, setShowDeletePopup] = useState(false);
+  const [deletePostId, setDeletePostId] = useState(null);
 
   useEffect(() => {
     window.__openCreatePost = () => setShowCreateModal(true)
@@ -107,7 +109,6 @@ export default function Feed() {
   }
 
   async function deletePost(postId) {
-    if (!confirm('Delete this post?')) return
     try {
       await axios.delete(`${API}/api/feed/${postId}`, { headers })
       setPosts(prev => prev.filter(p => p._id !== postId))
@@ -299,7 +300,10 @@ export default function Feed() {
                   <div style={{ flex: 1 }} />
 
                   {(isOwner || user?.isAdmin) && (
-                    <button onClick={() => deletePost(post._id)} style={{
+                    <button onClick={() => {
+                      setDeletePostId(post._id);
+                      setShowDeletePopup(true);
+                    }} style={{
                       background: 'none', border: 'none', cursor: 'pointer',
                       color: 'var(--text2)', display: 'flex', alignItems: 'center',
                       padding: '6px 10px', borderRadius: 20, transition: 'color 0.15s'
@@ -310,6 +314,37 @@ export default function Feed() {
                       <Trash2 size={15} />
                     </button>
                   )}
+
+                  {deletePostId === post._id && (
+                    <div style={{
+                      position: 'fixed', inset: 0, background: 'rgba(0,0,0,.55)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      zIndex: 9999
+                    }}>
+                      <div style={{
+                        background: 'var(--bg3)', padding: 34, borderRadius: 16,
+                        width: 320, textAlign: 'center',border:'1px',borderColor:'var(--border3)',borderStyle:'solid'
+                      }}>
+                        <h3 style={{ marginBottom: 16 }}>Delete Post</h3>
+                        <p>Are you sure you want to delete this post?</p>
+
+                        <div style={{ display: 'flex', gap: 10, justifyContent: 'center',marginTop: 16}}>
+                          <button onClick={() => setDeletePostId(null)} style={{ background: 'var(--green)',height:30,width:'60px',borderRadius:'5px',border:'none'}}>
+                            No
+                            </button>
+
+                          <button onClick={() => {
+                            deletePost(deletePostId);
+                            setDeletePostId(null);
+                          }} style={{ background: '#ef4444', color: '#fff',height:30,width:'60px', borderRadius:'5px',border:'none' }}>
+                            Yes
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+
 
                   <div style={{ position: 'relative' }}>
                     <button onClick={() => setSharePostId(sharePostId === post._id ? null : post._id)} style={{
