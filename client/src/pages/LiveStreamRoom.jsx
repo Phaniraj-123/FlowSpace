@@ -330,7 +330,7 @@ export default function LiveStreamRoom() {
           display: grid;
           grid-template-columns: 1fr 260px;
           gap: 14px;
-          height: calc(100vh - 80px);
+          height: 700px;
           overflow: auto;
         }
         @media (max-width: 768px) {
